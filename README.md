@@ -43,7 +43,7 @@ npm run dev    # local API and frontend
 
 ## Submission work remaining
 
-- Supply Walrus Memory Mainnet account and delegate credentials, then verify real Walrus calls in this environment. Tatum Mainnet balance and transaction reads were verified on 2026-10-28.
+- The local `.env` now has Walrus Memory Mainnet account and delegate credentials. A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. Complete the first real product decision through the app and verify it changes a later recommendation.
 - Complete and verify at least 10 meaningful Mainnet memories; preserve blob IDs and demonstrate the learning loop across a restart.
 - Add operator authentication and durable storage before any public demo deployment.
 - Publish the project repository, working demo, and blog post; record a 2–3 minute video.

@@ -3,3 +3,5 @@ dist/
 .env
 .local/
 *.log
+.npm-cache/
+.vercel/

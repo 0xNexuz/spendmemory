@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, ArrowDownRight, ArrowRight, Check, CheckCircle2, CircleHelp, Clock3, ExternalLink, Fingerprint, LockKeyhole, Plus, RefreshCw, ShieldCheck, Sparkles, Wallet, X } from 'lucide-react';
 import './styles.css';
+import { PublicDemo } from './PublicDemo';
 
 type Status = { network: string; tatumConfigured: boolean; memoryConfigured: boolean; confirmedWritesThisInstall: number; maxReviewSui: string };
 type Memory = { blobId: string; decision: string; reason: string; createdAt: string };
@@ -118,4 +119,4 @@ function App() {
   </div>;
 }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{import.meta.env.PROD ? <PublicDemo/> : <App/>}</React.StrictMode>);

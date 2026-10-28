@@ -5,7 +5,7 @@
 - **Project:** SpendMemory, a human-controlled Sui payment review assistant whose recommendations learn from Walrus Memory.
 - **Repository:** Local Git repository in this folder; no remote configured.
 - **Stage:** DEVELOPMENT.
-- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; one fictional product decision changed a later recommendation after restart.
+- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; one fictional product decision changed a later recommendation after restart. Public replay build prepared for GitHub and Vercel.
 - **Updated:** 2026-10-28.
 
 ## Git State
@@ -34,7 +34,7 @@
 
 - **Stack:** Vite/React frontend; local Express API; Walrus Memory TypeScript SDK; Tatum Sui GraphQL RPC; JSON file for local proposal state.
 - **Control flow:** proposal → Tatum balance + Walrus recall → deterministic recommendation → human decision → Walrus write job → confirmed blob ID.
-- **Trust assumptions:** Local single operator only. No payment signing, wallet custody, or public authentication. Do not deploy publicly in this state.
+- **Trust assumptions:** Live API is local single operator only. No payment signing or wallet custody. Public production build renders a static evidence replay with no API, writes, or credentials.
 - **Constraints:** Secrets via `.env`; Mainnet relayer only; exact structured memory matching; uncertain write locks instead of blind retry.
 
 ## Progress
@@ -47,6 +47,7 @@
 - **Count:** 1 confirmed product decision memory on Mainnet, explicitly fictional demo content; 9 more confirmed memories needed to reach the event minimum. Two useful local demo records remain (before and after); the timed-out local proposal was removed.
 - **P0:** Add nine more purposeful decision memories through the app, preserving confirmed blob IDs and clear demo labeling. Recheck learning behavior after more writes.
 - **P1:** Authenticated public deployment, blog, demo video, submission evidence.
+- **Deployment preparation:** Production Vite build renders an interactive public replay of the confirmed before/after memory result; local development still renders the live app. The replay uses verified blob evidence and no secrets or write endpoint. Public milestone count is a manually maintained snapshot.
 
 ## Verification
 
@@ -62,6 +63,7 @@
 | 2026-10-28 | Product Mainnet loop | VERIFIED: Tatum balance and Walrus recall in first proposal; confirmed decision write; server restart; second proposal changed from `review` to `decline` with the confirmed blob recalled. Initial SDK `/version` preflight timed out at the 5s default; increasing `preflightTimeoutMs` to 20s resolved it. |
 | 2026-10-28 | `npm test` and `npm run build` | VERIFIED after timeout adjustment: 4 policy tests passed; TypeScript and Vite build passed. |
 | 2026-10-28 | User wallet balance recheck | VERIFIED: Tatum and Sui public Mainnet GraphQL both returned 5,270,270,000 MIST (5.27027 SUI), all in coin balance. This supersedes the earlier 0 SUI observation. |
+| 2026-10-28 | Public replay build | VERIFIED: 4 policy tests passed and `npm run build` produced a Vite production bundle. Browser rendering and hosted deployment remain unverified. |
 
 ## Decision Log
 
@@ -79,4 +81,4 @@
 
 ## Next Action
 
-- Grow from one to at least ten confirmed Mainnet product decisions, with honest demo labeling and a visible learning loop. Then prepare public repo, demo video, and blog. Deployment, publication, and submission are separate authorization boundaries.
+- Publish the authorized GitHub repository and Vercel public replay, verify the hosted page, then grow from one to at least ten confirmed Mainnet product decisions with honest demo labeling. Prepare video and blog separately; submission remains a separate authorization boundary.

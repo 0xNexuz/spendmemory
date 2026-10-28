@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHandler, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, signTicket, WRITE_LIMIT } from '../server/hosted.js';
+import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, WRITE_LIMIT } from '../server/hosted.js';
 import { applyPaymentCheck, reconcilePayment } from '../server/policy.js';
 
 const SECRET = 'test-secret';
@@ -54,6 +54,8 @@ test('status reports visitor and demo memory counts separately', async () => {
   assert.equal(res.body.demoMemoryCount, 3);
   assert.equal(res.body.maxMemories, MAX_MEMORIES);
   assert.equal(res.headers['Cache-Control'], 'no-store');
+  assert.equal(res.body.lastSavedAt, null);
+  assert.equal(res.body.recentSaves, 0);
 });
 
 test('a bad amount is a 400, not a server error', async () => {
@@ -218,4 +220,29 @@ test('one connection cannot flood the shared memory', async () => {
   const other = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody, ip: '198.51.100.9' });
   const res = await call(handler, { method: 'POST', action: 'remember', body: { ticket: other.body.ticket, decision: 'approve', reason: 'A different visitor.' }, ip: '198.51.100.9' });
   assert.equal(res.statusCode, 202);
+});
+
+test('a burst of saves across all visitors is refused, using Walrus timestamps', async () => {
+  const NOW = 1_700_000_000_000;
+  const recent = Array.from({ length: GLOBAL_WRITE_LIMIT }, (_, i) => ({ created_at: new Date(NOW - i * 1000).toISOString() }));
+  const { deps, calls } = fakes({ listProductMemories: async () => recent });
+  const handler = createHandler(deps);
+  const evaluated = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody, ip: '192.0.2.1' });
+  const res = await call(handler, { method: 'POST', action: 'remember', body: { ticket: evaluated.body.ticket, decision: 'decline', reason: 'Arrives during a burst.' }, ip: '192.0.2.1' });
+  assert.equal(res.statusCode, 429);
+  assert.equal(calls.remember.length, 0);
+  const old = recent.map(() => ({ created_at: new Date(NOW - 11 * 60_000).toISOString() }));
+  deps.listProductMemories = async () => old;
+  const later = await call(handler, { method: 'POST', action: 'remember', body: { ticket: evaluated.body.ticket, decision: 'decline', reason: 'Arrives after the burst.' }, ip: '192.0.2.1' });
+  assert.equal(later.statusCode, 202);
+});
+
+test('Walrus timestamps are read as ISO strings, seconds or milliseconds', () => {
+  const ms = 1_700_000_000_000;
+  assert.equal(createdAtMs('2023-11-14T22:13:20.000Z'), ms);
+  assert.equal(createdAtMs(1_700_000_000), ms);
+  assert.equal(createdAtMs(String(ms)), ms);
+  assert.equal(createdAtMs('not a date'), null);
+  assert.equal(createdAtMs(undefined), null);
+  assert.equal(recentCount([{ created_at: ms - 1000 }, { created_at: ms - 11 * 60_000 }, {}], ms), 1);
 });

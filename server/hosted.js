@@ -11,6 +11,24 @@ const JOB = /^[0-9a-f-]{36}$/i;
 const TICKET_TTL_MS = 30 * 60_000;
 export const WRITE_LIMIT = 5;
 export const WRITE_WINDOW_MS = 10 * 60_000;
+export const GLOBAL_WRITE_LIMIT = 15;
+
+/** Milliseconds since epoch for a Walrus created_at value (ISO string, or seconds/ms number), or null. */
+export function createdAtMs(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'number' || /^\d+$/.test(String(value))) {
+    const n = Number(value);
+    return n < 1e12 ? n * 1000 : n;
+  }
+  const t = Date.parse(String(value));
+  return Number.isNaN(t) ? null : t;
+}
+
+/** How many memories in a namespace listing were created inside the window ending at `now`. */
+export function recentCount(memories, now, windowMs = WRITE_WINDOW_MS) {
+  const cutoff = now - windowMs;
+  return memories.filter((m) => { const t = createdAtMs(m?.created_at); return t !== null && t > cutoff; }).length;
+}
 
 class ClientError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -57,7 +75,7 @@ export function idempotencyKey(proposalId) {
 export function createHandler(deps) {
   const now = deps.now || (() => Date.now());
   const maxReviewMist = parseSuiToMist(deps.maxReviewSui || '25');
-  // Best effort only: serverless instances do not share memory. A Vercel firewall rate-limit rule is the durable control.
+  // Per connection, per instance: serverless instances do not share memory. The Walrus-backed global limit below is shared.
   const recentWrites = new Map();
   function allowWrite(ip) {
     const cutoff = now() - WRITE_WINDOW_MS;
@@ -81,7 +99,8 @@ export function createHandler(deps) {
     try {
       if (action === 'status' && req.method === 'GET') {
         const [live, demo] = await Promise.all([deps.listProductMemories(LIVE_NAMESPACE), deps.listProductMemories()]);
-        return send(res, 200, { network: 'Sui Mainnet', memoryCount: live.length, demoMemoryCount: demo.length, totalMemoryCount: live.length + demo.length, maxMemories: MAX_MEMORIES, maxReviewSui: mistToSui(maxReviewMist) });
+        const newest = (list) => { const ts = list.map((m) => createdAtMs(m?.created_at)).filter((t) => t !== null); return ts.length ? new Date(Math.max(...ts)).toISOString() : null; };
+        return send(res, 200, { network: 'Sui Mainnet', memoryCount: live.length, demoMemoryCount: demo.length, totalMemoryCount: live.length + demo.length, maxMemories: MAX_MEMORIES, maxReviewSui: mistToSui(maxReviewMist), lastSavedAt: newest(live), demoLastSavedAt: newest(demo), recentSaves: recentCount(live, now()), recentSaveLimit: GLOBAL_WRITE_LIMIT });
       }
 
       if (action === 'evaluate' && req.method === 'POST') {
@@ -138,6 +157,8 @@ export function createHandler(deps) {
         const [existing, saved] = await Promise.all([deps.listProductMemories(LIVE_NAMESPACE), deps.recallByProposal(payload, LIVE_NAMESPACE)]);
         if (alreadySaved(saved, payload.id)) throw new ClientError(409, 'This proposal already has a saved decision. Evaluate a new proposal to record another.');
         if (existing.length >= MAX_MEMORIES) throw new ClientError(429, 'Public demo memory cap reached. Evaluation remains available.');
+        // Shared across every serverless instance: Walrus records when each memory was created.
+        if (recentCount(existing, now()) >= GLOBAL_WRITE_LIMIT) throw new ClientError(429, 'Many decisions were saved in the last few minutes. Try again shortly.');
         const memory = { app: 'spendmemory', v: 1, source: 'public-web', scenarioType: 'user-reported', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id };
         if (payload.payment) memory.payment = { digest: payload.payment.digest, checkpoint: payload.payment.checkpoint, verifiedBy: 'tatum-sui-graphql' };
         const accepted = await deps.beginRemember(memory, LIVE_NAMESPACE, { idempotencyKey: idempotencyKey(payload.id) });

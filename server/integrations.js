@@ -1,6 +1,6 @@
 import { MemWal } from '@mysten-incubation/memwal';
 
-const RPC_URL = 'https://sui-mainnet.gateway.tatum.io/';
+const GRAPHQL_URL = 'https://sui-mainnet.gateway.tatum.io/graphql';
 
 export function hasTatum() { return Boolean(process.env.TATUM_API_KEY); }
 export function hasMemory() { return Boolean(process.env.MEMWAL_PRIVATE_KEY && process.env.MEMWAL_ACCOUNT_ID); }
@@ -17,27 +17,42 @@ function memoryClient() {
   });
 }
 
-export async function tatumRpc(method, params) {
+async function tatumQuery(query, variables) {
   if (!hasTatum()) throw new Error('Tatum API key is not configured.');
-  const response = await fetch(RPC_URL, {
+  const response = await fetch(GRAPHQL_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.TATUM_API_KEY },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    body: JSON.stringify({ query, variables }),
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error(`Tatum RPC returned HTTP ${response.status}.`);
+  if (!response.ok) throw new Error(`Tatum GraphQL returned HTTP ${response.status}.`);
   const data = await response.json();
-  if (data.error) throw new Error(`Tatum RPC: ${data.error.message || 'request failed'}`);
-  return data.result;
+  if (data.errors?.length) throw new Error(`Tatum GraphQL: ${data.errors[0].message || 'request failed'}`);
+  return data.data;
 }
 
 export async function getBalance(address) {
-  const result = await tatumRpc('suix_getBalance', [address]);
-  return String(result.totalBalance);
+  const data = await tatumQuery(
+    'query Balance($address: SuiAddress!) { address(address: $address) { balance(coinType: "0x2::sui::SUI") { totalBalance } } }',
+    { address },
+  );
+  if (!data.address) throw new Error('Tatum GraphQL did not return the Sui address.');
+  return String(data.address.balance?.totalBalance ?? '0');
 }
 
 export async function getTransaction(digest) {
-  return tatumRpc('sui_getTransactionBlock', [digest, { showEffects: true, showBalanceChanges: true, showInput: true }]);
+  const data = await tatumQuery(
+    'query Transaction($digest: String!) { transaction(digest: $digest) { digest effects { status timestamp checkpoint { sequenceNumber } balanceChanges { nodes { amount owner { address } } } } } }',
+    { digest },
+  );
+  if (!data.transaction) throw new Error('Transaction not found on Sui Mainnet.');
+  const effects = data.transaction.effects;
+  return {
+    effects: { status: { status: effects?.status || 'unknown' } },
+    checkpoint: effects?.checkpoint?.sequenceNumber ?? null,
+    timestampMs: effects?.timestamp ? String(Date.parse(effects.timestamp)) : null,
+    balanceChanges: effects?.balanceChanges?.nodes || [],
+  };
 }
 
 export async function recall(proposal) {

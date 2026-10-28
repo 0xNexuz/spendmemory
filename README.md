@@ -36,14 +36,14 @@ npm run dev    # local API and frontend
 
 ## Integration design
 
-- **Tatum:** `suix_getBalance` for wallet context and `sui_getTransactionBlock` for a submitted digest, sent to `https://sui-mainnet.gateway.tatum.io/` with the server-side `x-api-key` header. A balance read is displayed as unverified if the key is absent or the call fails.
+- **Tatum:** Sui GraphQL RPC reads wallet SUI balance and transaction effects at `https://sui-mainnet.gateway.tatum.io/graphql` with a server-side `x-api-key` header. The former JSON-RPC endpoint returned HTTP 404 in a live check on 2026-10-28. A balance read is displayed as unverified if the key is absent or the call fails.
 - **Walrus Memory:** the `@mysten-incubation/memwal` SDK recalls decisions by merchant and category; only exact matching structured memories can affect a recommendation. A write job must return a blob ID before a decision is shown as confirmed.
 - **Policy:** insufficient live balance is a hard stop. The configurable amount threshold requires review. Recalled approvals can suggest considering approval, but never authorize payment. A matching history of declines changes the suggestion to decline or investigate.
 - **Write safety:** a decision moves to `pending_memory` before the remote write. When a job ID is received, the UI can check that job again after a timeout or restart. If the initial request's result is uncertain, the proposal remains locked until the operator checks the Walrus dashboard; a blind retry could create duplicate Mainnet memories.
 
 ## Submission work remaining
 
-- Supply credentials and verify real Tatum and Walrus calls in this environment.
+- Supply Walrus Memory Mainnet account and delegate credentials, then verify real Walrus calls in this environment. Tatum Mainnet balance and transaction reads were verified on 2026-10-28.
 - Complete and verify at least 10 meaningful Mainnet memories; preserve blob IDs and demonstrate the learning loop across a restart.
 - Add operator authentication and durable storage before any public demo deployment.
 - Publish the project repository, working demo, and blog post; record a 2–3 minute video.

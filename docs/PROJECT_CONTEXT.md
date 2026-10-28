@@ -5,13 +5,13 @@
 - **Project:** SpendMemory, a human-controlled Sui payment review assistant whose recommendations learn from Walrus Memory.
 - **Repository:** Local Git repository in this folder; no remote configured.
 - **Stage:** DEVELOPMENT.
-- **Status:** Local prototype VERIFIED; live integrations UNVERIFIED.
-- **Updated:** 2026-10-20.
+- **Status:** Local prototype and Tatum Mainnet GraphQL reads VERIFIED; Walrus Mainnet integration UNVERIFIED.
+- **Updated:** 2026-10-28.
 
 ## Git State
 
 - **Branch/HEAD:** `master`; local root commit exists (see `git log -1`).
-- **Working tree:** Clean after context update is committed. `node_modules`, `.env`, `.local`, and `dist` are ignored.
+- **Working tree:** Check `git status` for current changes. `node_modules`, `.env`, `.local`, and `dist` are ignored.
 - **Last verified milestone:** Local policy tests, frontend build, API smoke, and browser render passed on 2026-10-20.
 
 ## Hackathon Context
@@ -32,7 +32,7 @@
 
 ## Architecture Decisions
 
-- **Stack:** Vite/React frontend; local Express API; Walrus Memory TypeScript SDK; Tatum Sui JSON-RPC; JSON file for local proposal state.
+- **Stack:** Vite/React frontend; local Express API; Walrus Memory TypeScript SDK; Tatum Sui GraphQL RPC; JSON file for local proposal state.
 - **Control flow:** proposal → Tatum balance + Walrus recall → deterministic recommendation → human decision → Walrus write job → confirmed blob ID.
 - **Trust assumptions:** Local single operator only. No payment signing, wallet custody, or public authentication. Do not deploy publicly in this state.
 - **Constraints:** Secrets via `.env`; Mainnet relayer only; exact structured memory matching; uncertain write locks instead of blind retry.
@@ -41,9 +41,10 @@
 
 - **Approved scope:** Build SpendMemory project. External deployment, publishing, costs, credentials, and submission still require user authorization/input.
 - **Implemented:** Proposal form, live Tatum balance call path, Walrus recall path, deterministic policy, human decision write/confirm path with known-job reconciliation, transaction lookup, local history, responsive UI, setup docs.
-- **Unverified:** Live Tatum and Walrus calls, Mainnet blob count, end-to-end learning across a real restart.
-- **Blocked:** Live calls need the user's Tatum API key and Walrus Memory Mainnet delegate credentials. No credentials are stored in the repository.
-- **P0:** Run live integration smoke after credentials; confirm 10 meaningful writes and restart behavior.
+- **Verified:** Tatum key is configured in ignored `.env`; Mainnet GraphQL balance and transaction reads succeeded on 2026-10-28. Live method discovery listed GraphQL only; JSON-RPC POST returned 404, so the app was migrated to GraphQL.
+- **Unverified:** Walrus Mainnet calls, Mainnet blob count, end-to-end learning across a real restart.
+- **Blocked:** Walrus Mainnet delegate private key and account object ID are still missing from `.env`. No credentials are stored in the repository.
+- **P0:** Add Walrus credentials, run live integration smoke, confirm 10 meaningful writes and restart behavior.
 - **P1:** Authenticated public deployment, blog, demo video, submission evidence.
 
 ## Verification
@@ -54,6 +55,8 @@
 | 2026-10-20 | `npm run build` | VERIFIED: TypeScript check and Vite bundle passed. |
 | 2026-10-20 | Local API smoke | VERIFIED: status reports both integrations unconfigured; proposal evaluation conservatively reports unverified balance/recall. Disposable local proposal removed. |
 | 2026-10-20 | Browser render | VERIFIED: app loaded at `http://127.0.0.1:5173/`, controls and missing-credential state rendered. |
+| 2026-10-28 | Tatum Mainnet GraphQL | VERIFIED: balance query returned 0 MIST for a public example address; transaction query returned SUCCESS and a checkpoint for a live digest. JSON-RPC POST returned 404. |
+| 2026-10-28 | `npm test` and `npm run build` | VERIFIED: 4 policy tests passed; TypeScript and Vite production build passed with the runner config loader. |
 
 ## Decision Log
 
@@ -71,4 +74,4 @@
 
 ## Next Action
 
-- Perform real Mainnet integration checks when credentials are available. Deployment, publication, and submission are separate authorization boundaries.
+- Add Walrus Memory Mainnet delegate credentials to ignored `.env`, then verify write, confirmation, recall, and learning across restart. Deployment, publication, and submission are separate authorization boundaries.

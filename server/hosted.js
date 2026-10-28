@@ -9,6 +9,8 @@ const ADDRESS = /^0x[a-fA-F0-9]{64}$/;
 const DIGEST = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const JOB = /^[0-9a-f-]{36}$/i;
 const TICKET_TTL_MS = 30 * 60_000;
+export const WRITE_LIMIT = 5;
+export const WRITE_WINDOW_MS = 10 * 60_000;
 
 class ClientError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -55,6 +57,17 @@ export function idempotencyKey(proposalId) {
 export function createHandler(deps) {
   const now = deps.now || (() => Date.now());
   const maxReviewMist = parseSuiToMist(deps.maxReviewSui || '25');
+  // Best effort only: serverless instances do not share memory. A Vercel firewall rate-limit rule is the durable control.
+  const recentWrites = new Map();
+  function allowWrite(ip) {
+    const cutoff = now() - WRITE_WINDOW_MS;
+    const times = (recentWrites.get(ip) || []).filter((t) => t > cutoff);
+    if (times.length >= WRITE_LIMIT) { recentWrites.set(ip, times); return false; }
+    times.push(now());
+    recentWrites.set(ip, times);
+    if (recentWrites.size > 5000) recentWrites.delete(recentWrites.keys().next().value);
+    return true;
+  }
 
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
@@ -120,6 +133,8 @@ export function createHandler(deps) {
         const decision = String(req.body?.decision || '');
         const reason = String(req.body?.reason || '').trim();
         if (!['approve', 'decline'].includes(decision) || reason.length < 8 || reason.length > 500) throw new ClientError(400, 'Choose approve or decline and give a reason of 8–500 characters.');
+        const ip = String(req.headers['x-real-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0] || 'unknown').trim();
+        if (!allowWrite(ip)) throw new ClientError(429, 'Too many saved decisions from this connection. Try again in a few minutes.');
         const [existing, saved] = await Promise.all([deps.listProductMemories(LIVE_NAMESPACE), deps.recallByProposal(payload, LIVE_NAMESPACE)]);
         if (alreadySaved(saved, payload.id)) throw new ClientError(409, 'This proposal already has a saved decision. Evaluate a new proposal to record another.');
         if (existing.length >= MAX_MEMORIES) throw new ClientError(429, 'Public demo memory cap reached. Evaluation remains available.');

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHandler, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, signTicket } from '../server/hosted.js';
+import { createHandler, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, signTicket, WRITE_LIMIT } from '../server/hosted.js';
 import { applyPaymentCheck, reconcilePayment } from '../server/policy.js';
 
 const SECRET = 'test-secret';
@@ -32,9 +32,9 @@ function fakes(overrides = {}) {
   return { deps, calls };
 }
 
-async function call(handler, { method = 'GET', action, body, query = {}, origin, host = 'spendmemory.vercel.app' } = {}) {
+async function call(handler, { method = 'GET', action, body, query = {}, origin, host = 'spendmemory.vercel.app', ip = '203.0.113.7' } = {}) {
   const res = { statusCode: 0, body: null, headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
-  await handler({ method, body, query: { action, ...query }, headers: { host, ...(origin ? { origin } : {}) } }, res);
+  await handler({ method, body, query: { action, ...query }, headers: { host, 'x-forwarded-for': `${ip}, 10.0.0.1`, ...(origin ? { origin } : {}) } }, res);
   return res;
 }
 
@@ -203,4 +203,19 @@ test('a payment mismatch can only make the suggestion more cautious', () => {
   assert.equal(applyPaymentCheck(consider, { checked: false }, '1').recommendation, 'review');
   assert.equal(applyPaymentCheck(decline, { checked: true, matches: true, succeeded: true }, '1').recommendation, 'decline');
   assert.equal(applyPaymentCheck(consider, null, '1'), consider);
+});
+
+test('one connection cannot flood the shared memory', async () => {
+  const { deps, calls } = fakes();
+  const handler = createHandler(deps);
+  const statuses = [];
+  for (let i = 0; i <= WRITE_LIMIT; i++) {
+    const evaluated = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody });
+    statuses.push((await call(handler, { method: 'POST', action: 'remember', body: { ticket: evaluated.body.ticket, decision: 'decline', reason: 'Flooding attempt number ' + i } })).statusCode);
+  }
+  assert.deepEqual(statuses, [...new Array(WRITE_LIMIT).fill(202), 429]);
+  assert.equal(calls.remember.length, WRITE_LIMIT);
+  const other = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody, ip: '198.51.100.9' });
+  const res = await call(handler, { method: 'POST', action: 'remember', body: { ticket: other.body.ticket, decision: 'approve', reason: 'A different visitor.' }, ip: '198.51.100.9' });
+  assert.equal(res.statusCode, 202);
 });

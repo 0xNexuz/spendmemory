@@ -6,6 +6,7 @@ import { PublicDemo } from './PublicDemo';
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
 import { useActiveSection, useScrolled } from './useActiveSection';
+import { LiveApp } from './LiveApp';
 
 type Status = { network: string; tatumConfigured: boolean; memoryConfigured: boolean; confirmedWritesThisInstall: number; maxReviewSui: string };
 type Memory = { blobId: string; decision: string; reason: string; createdAt: string };
@@ -166,4 +167,4 @@ function App() {
   </div>;
 }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode>{import.meta.env.PROD ? <PublicDemo/> : <App/>}</React.StrictMode>);
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{import.meta.env.PROD ? (new URLSearchParams(location.search).has('replay') ? <PublicDemo/> : <LiveApp/>) : <App/>}</React.StrictMode>);

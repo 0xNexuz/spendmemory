@@ -75,3 +75,20 @@ export async function finishRemember(jobId) {
   if (!response.blob_id) throw new Error('Walrus Memory did not return a confirmed blob ID.');
   return response;
 }
+
+export async function memoryJobStatus(jobId) {
+  return memoryClient().getRememberStatus(jobId);
+}
+
+export async function listProductMemories() {
+  const client = memoryClient();
+  const namespace = process.env.MEMWAL_NAMESPACE || 'spendmemory-mainnet';
+  const memories = [];
+  let cursor;
+  do {
+    const page = await client.listMemories({ cursor, namespace, limit: 100 });
+    memories.push(...page.memories);
+    cursor = page.has_more ? page.next_cursor : undefined;
+  } while (cursor && memories.length < 1000);
+  return memories;
+}

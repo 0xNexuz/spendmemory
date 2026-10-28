@@ -55,6 +55,7 @@ export function PublicDemo() {
       <div className="sm-header-inner">
         <a className="sm-brand" href="#top" aria-label="SpendMemory, back to top"><StippleMark/><span>SpendMemory</span></a>
         <nav className="sm-nav" aria-label="Page">
+          <a href="/">Live app</a>
           <a href="#replay" aria-current={section === 'replay' ? 'location' : undefined}>Replay</a>
           <a href="#receipt" aria-current={section === 'receipt' ? 'location' : undefined}>Receipt</a>
           <a className="sm-nav-repo" href={repoUrl} target="_blank" rel="noreferrer" aria-label="Source on GitHub"><Github size={16}/><span>Source</span></a>
@@ -79,7 +80,7 @@ export function PublicDemo() {
 
     <section className="sm-ledger" aria-label="Verified milestones">
       <dl>
-        <div><dt>Mainnet decisions</dt><dd><strong>1 of 10</strong><span>Nine more confirmed memories to go.</span></dd></div>
+        <div><dt>Mainnet memories</dt><dd><strong>50+ confirmed</strong><span>Live count in the app. Seeded demo records are labeled fictional.</span></dd></div>
         <div><dt>Tatum reads</dt><dd><strong>Verified</strong><span>Sui balance and transaction data.</span></dd></div>
         <div><dt>Walrus write</dt><dd><strong>Confirmed</strong><span>The stored blob came back after a restart.</span></dd></div>
       </dl>
@@ -155,11 +156,11 @@ export function PublicDemo() {
       <LockKeyhole size={24}/>
       <div>
         <h3>Human control stays in the loop</h3>
-        <p>This public replay cannot create memories or send payments. The live write flow runs locally, and its credentials stay out of GitHub and this deployment.</p>
+        <p>The live app can evaluate proposals and save decisions to Walrus Mainnet. It never sends payments. Server credentials stay out of GitHub and the browser.</p>
       </div>
-      <a href={repoUrl} target="_blank" rel="noreferrer" className="sm-link-ink">See the implementation <ArrowRight size={16}/></a>
+      <a href="/" className="sm-link-ink">Open the live app <ArrowRight size={16}/></a>
     </section>
 
-    <footer className="sm-footer"><span>SpendMemory, built for Total Recall 2026</span><span>Public evidence replay, 1 of 10 Mainnet product memories</span></footer>
+    <footer className="sm-footer"><span>SpendMemory, built for Total Recall 2026</span><span>Evidence replay. 50+ confirmed Mainnet memories, including fictional demos.</span></footer>
   </main>;
 }

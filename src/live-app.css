@@ -71,3 +71,7 @@
 @media (max-width:420px){
   .lv-page .sm-nav a[href="/?replay=1"]{display:none}
 }
+.lv-optional{font-weight:500;color:var(--rule);margin-left:4px}
+.lv-hint{display:block;font-size:13px;font-weight:500;color:var(--ink-2);line-height:1.45}
+.lv-page .sm-rows dd.lv-ok{color:#24563a}
+.lv-page .sm-rows dd.lv-warn{color:#8d2e22}

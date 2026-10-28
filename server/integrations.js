@@ -43,7 +43,7 @@ export async function getBalance(address) {
 
 export async function getTransaction(digest) {
   const data = await tatumQuery(
-    'query Transaction($digest: String!) { transaction(digest: $digest) { digest effects { status timestamp checkpoint { sequenceNumber } balanceChanges { nodes { amount owner { address } } } } } }',
+    'query Transaction($digest: String!) { transaction(digest: $digest) { digest effects { status timestamp checkpoint { sequenceNumber } balanceChanges { nodes { amount coinType { repr } owner { address } } } } } }',
     { digest },
   );
   if (!data.transaction) throw new Error('Transaction not found on Sui Mainnet.');
@@ -56,14 +56,32 @@ export async function getTransaction(digest) {
   };
 }
 
+// The relayer caps recall at 100 results. The public namespace is capped at 100 memories,
+// so every memory in it is a candidate for exact merchant and category matching.
+const RECALL_LIMIT = 100;
+
 export async function recall(proposal, namespace) {
   const client = memoryClient(namespace);
-  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}`, limit: 30 });
+  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}`, limit: RECALL_LIMIT });
   return response.results || [];
 }
 
-export async function beginRemember(decision, namespace) {
+/** The most recent memories in a namespace, used to spot a proposal that already has a saved decision. */
+export async function recallByProposal(proposal, namespace) {
   const client = memoryClient(namespace);
+  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}`, limit: RECALL_LIMIT, sort: 'recent' });
+  return response.results || [];
+}
+
+export async function beginRemember(decision, namespace, options = {}) {
+  const client = memoryClient(namespace);
+  if (options.idempotencyKey) {
+    // rememberBulk takes an idempotency key, so a repeated request for the same proposal cannot create a second memory.
+    const accepted = await client.rememberBulk([{ text: JSON.stringify(decision) }], { idempotencyKey: options.idempotencyKey });
+    const jobId = accepted?.job_ids?.[0];
+    if (!jobId) throw new Error('Walrus Memory did not return a write job ID.');
+    return { job_id: jobId, status: accepted.status };
+  }
   const response = await client.remember(JSON.stringify(decision));
   if (!response.job_id) throw new Error('Walrus Memory did not return a write job ID.');
   return response;

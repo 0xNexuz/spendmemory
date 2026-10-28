@@ -7,7 +7,8 @@ import './public-demo.css';
 import './live-app.css';
 
 type Match = { blobId: string; decision: string; reason: string; createdAt: string };
-type Evaluation = { recommendation: string; reasons: string[]; balanceSui: string | null; chainVerified: boolean; memoryVerified: boolean; matchedMemories: Match[]; chainError: string | null; memoryError: string | null };
+type Payment = { digest: string; checked: boolean; succeeded?: boolean; walletPaid?: boolean; matches?: boolean; walletChangeSui?: string; checkpoint?: number | string | null; error: string | null };
+type Evaluation = { recommendation: string; reasons: string[]; balanceSui: string | null; chainVerified: boolean; memoryVerified: boolean; matchedMemories: Match[]; chainError: string | null; memoryError: string | null ; payment?: Payment | null };
 type Entry = { id: string; merchant: string; category: string; amountSui: string; walletAddress: string; createdAt: string; evaluation: Evaluation; ticket: string; state: 'open' | 'pending' | 'confirmed' | 'failed'; decision?: string; reason?: string; jobId?: string; blobId?: string };
 type Status = { network: string; memoryCount: number; demoMemoryCount: number; totalMemoryCount: number; maxMemories: number; maxReviewSui: string };
 const STORAGE = 'spendmemory-public-reviews-v1';
@@ -39,6 +40,7 @@ export function LiveApp() {
   const [category, setCategory] = useState('Software');
   const [amountSui, setAmountSui] = useState('0.02');
   const [walletAddress, setWalletAddress] = useState('');
+  const [txDigest, setTxDigest] = useState('');
   const [decision, setDecision] = useState<'approve' | 'decline'>('decline');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -59,7 +61,7 @@ export function LiveApp() {
   async function evaluate(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
     try {
-      const result = await request<{ proposal: Omit<Entry, 'evaluation' | 'ticket' | 'state'>; evaluation: Evaluation; ticket: string }>('evaluate', { merchant, category, amountSui, walletAddress });
+      const result = await request<{ proposal: Omit<Entry, 'evaluation' | 'ticket' | 'state'>; evaluation: Evaluation; ticket: string }>('evaluate', { merchant, category, amountSui, walletAddress, txDigest: txDigest.trim() || undefined });
       replace({ ...result.proposal, evaluation: result.evaluation, ticket: result.ticket, state: 'open' });
       setNotice('Live Tatum and Walrus checks completed. Review the evidence before deciding.');
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -141,6 +143,7 @@ export function LiveApp() {
             <label>Category<input required minLength={2} maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)}/></label>
             <label>Amount in SUI<input required inputMode="decimal" value={amountSui} onChange={(e) => setAmountSui(e.target.value)}/></label>
             <label className="wide">Public Sui wallet address<input required value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} placeholder="0x…" spellCheck={false}/></label>
+            <label className="wide"><span>Payment transaction digest <span className="lv-optional">optional</span></span><input value={txDigest} onChange={(e) => setTxDigest(e.target.value)} placeholder="Already paid? Paste the Sui transaction digest" spellCheck={false}/><small className="lv-hint">Tatum checks that this wallet paid exactly the amount above. A matching payment is saved with your decision.</small></label>
           </div>
           <button disabled={busy} className="sm-button primary lv-full" type="submit">{busy ? <><RefreshCw className="lv-spin" size={17}/> Checking…</> : <>Check with Tatum and Walrus <ArrowRight size={17}/></>}</button>
         </form>
@@ -155,10 +158,13 @@ export function LiveApp() {
             <dl className="sm-rows">
               <div><dt>Tatum balance</dt><dd>{selected.evaluation.chainVerified ? `${selected.evaluation.balanceSui} SUI` : 'Unverified'}</dd></div>
               <div><dt>Walrus recall</dt><dd>{selected.evaluation.memoryVerified ? `${selected.evaluation.matchedMemories.length} matching` : 'Unverified'}</dd></div>
+            
+              {selected.evaluation.payment && <div><dt>Payment on Sui</dt><dd className={selected.evaluation.payment.matches ? 'lv-ok' : 'lv-warn'}>{!selected.evaluation.payment.checked ? 'Could not check' : selected.evaluation.payment.matches ? `Verified, ${selected.amountSui} SUI paid` : selected.evaluation.payment.succeeded ? 'Does not match' : 'Transaction failed'}</dd></div>}
             </dl>
             <ul className="lv-reasons">{selected.evaluation.reasons.map((item, i) => <li key={i}><Check size={15}/>{item}</li>)}</ul>
             {selected.evaluation.chainError && <p className="lv-inline-error">Tatum: {selected.evaluation.chainError}</p>}
             {selected.evaluation.memoryError && <p className="lv-inline-error">Walrus: {selected.evaluation.memoryError}</p>}
+            {selected.evaluation.payment?.error && <p className="lv-inline-error">Tatum payment check: {selected.evaluation.payment.error}</p>}
 
             {selected.state === 'open' && <div className="lv-decision">
               <div className="sm-switch" role="group" aria-label="Decision">
@@ -171,7 +177,7 @@ export function LiveApp() {
             {selected.state === 'pending' && (selected.jobId
               ? <button className="sm-button ink lv-top" disabled={busy} onClick={() => checkJob(selected)} type="button"><RefreshCw size={16}/> Check write status</button>
               : <p className="lv-note">Write outcome uncertain. Check the Walrus account before making another proposal.</p>)}
-            {selected.state === 'confirmed' && <div className="lv-confirmed"><CheckCircle2 size={19}/><span>Confirmed blob <code title={selected.blobId}>{shortId(selected.blobId || '')}</code></span></div>}
+            {selected.state === 'confirmed' && <div className="lv-confirmed"><CheckCircle2 size={19}/><span>Confirmed blob <code title={selected.blobId}>{shortId(selected.blobId || '')}</code>{selected.evaluation.payment?.matches ? ', saved with the verified payment' : ''}</span></div>}
             {selected.state === 'failed' && <p className="lv-note">Write failed. Make a new proposal before trying again.</p>}
           </> : <div className="lv-empty"><h3>Your brief appears here</h3><p>Fill in the proposal to see the live Tatum balance and any matching decisions recalled from Walrus.</p></div>}
         </article>

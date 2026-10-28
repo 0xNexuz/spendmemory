@@ -23,7 +23,7 @@ export function PublicDemo() {
     </section>
 
     <section className="demo-metrics" aria-label="Verified milestones">
-      <div><span>MAINNET DECISIONS</span><strong>1 <small>/ 10</small></strong><p>Nine confirmed memories remain.</p></div>
+      <div><span>MAINNET MEMORIES</span><strong>50 <small>/ 50</small></strong><p>49 labeled fictional demo records; submission evidence is separate.</p></div>
       <div><span>TATUM READS</span><strong>Verified</strong><p>Sui balance and transaction data.</p></div>
       <div><span>WALRUS WRITE</span><strong>Confirmed</strong><p>Stored blob recalled after restart.</p></div>
     </section>
@@ -38,7 +38,7 @@ export function PublicDemo() {
 
     <section className="demo-section proof"><div className="demo-section-head"><div><span className="demo-section-tag">02 / THE RECEIPT</span><h2>Memory with a real ID.</h2><p>One fictional decision was written to Walrus Memory Mainnet and returned this confirmed blob ID. The app recalled the same blob after a server restart.</p></div></div><div className="demo-proof-card"><div className="demo-proof-icon"><CheckCircle2 size={25}/></div><div><span>CONFIRMED WALRUS BLOB</span><code>{blobId}</code><p>Decision: decline · Merchant: DemoCloud subscription · Category: software</p></div></div></section>
 
-    <section className="demo-footer-callout"><LockKeyhole size={22}/><div><h3>Human control stays in the loop.</h3><p>This public replay cannot create memories or send payments. The local app contains the live write flow; its credentials stay out of GitHub and this deployment.</p></div><a href={repoUrl} target="_blank" rel="noreferrer">See implementation <ArrowRight size={16}/></a></section>
-    <footer className="demo-footer"><span>SpendMemory · Total Recall 2026</span><span>Public evidence replay · 1 of 10 Mainnet product memories</span></footer>
+    <section className="demo-footer-callout"><LockKeyhole size={22}/><div><h3>Human control stays in the loop.</h3><p>The live app can evaluate proposals and save decisions to Walrus Mainnet. It never sends payments. Server credentials stay out of GitHub and the browser.</p></div><a href="/">Open live app <ArrowRight size={16}/></a></section>
+    <footer className="demo-footer"><span>SpendMemory · Total Recall 2026</span><span>Evidence replay · 50 confirmed Mainnet memories, 49 fictional seeds</span></footer>
   </main>;
 }

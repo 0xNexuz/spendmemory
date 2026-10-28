@@ -1,8 +1,8 @@
 # SpendMemory
 
-A local-first payment review prototype for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/). It reads a Sui wallet balance through Tatum RPC, recalls matching past decisions from Walrus Memory, and gives a human a review brief. A human decision is stored on Walrus Mainnet and confirmed before the local app marks it complete. The app **does not send payments**.
+A Sui payment review demo for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/). It reads a Sui wallet balance through Tatum RPC, recalls matching past decisions from Walrus Memory, and gives a human a review brief. A human decision can be stored on Walrus Mainnet and confirmed by its blob ID. The app **does not send payments**.
 
-- [Public evidence replay](https://spendmemory.vercel.app/) on Vercel
+- [Live public app](https://spendmemory.vercel.app/) on Vercel; [evidence replay](https://spendmemory.vercel.app/?replay=1)
 - [Public source repository](https://github.com/0xNexuz/spendmemory) on GitHub
 
 ## What the demo proves
@@ -13,7 +13,7 @@ A local-first payment review prototype for the [Walrus × Tatum Total Recall hac
 4. Restart the app and review a similar proposal. The app recalls the confirmed decision and visibly changes its recommendation.
 5. The proof panel shows the confirmed blob ID. A separate lookup verifies an actual Sui transaction digest through Tatum when one is available.
 
-The 10-memory submission requirement is **not pre-filled**. The counter reports only confirmed writes made through this installation; use the Walrus Memory dashboard to verify the total Mainnet account count before submission. Proposal data and wallet addresses entered locally are stored in `.local/data.json`, which is ignored by Git.
+The `spendmemory-mainnet` namespace has **50 confirmed Mainnet memories**: one original fictional demo decision and 49 additional clearly labeled fictional demo decisions. Each of the 49 seed jobs returned a blob ID and the 49 blobs were independently listed through the Walrus Memory SDK. The separate integration-check namespace is excluded. These are real Mainnet writes containing synthetic scenarios, not 50 independent users. The hosted counter reads the namespace live.
 
 ## Run locally
 
@@ -27,10 +27,7 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Add your own `TATUM_API_KEY`, `MEMWAL_PRIVATE_KEY`, and `MEMWAL_ACCOUNT_ID` to `.env` for live features. Create the Mainnet Walrus account and delegate key at [memory.walrus.xyz](https://memory.walrus.xyz/). The key stays server-side. The application deliberately accepts only the [Mainnet relayer](https://docs.wal.app/walrus-memory/getting-started/choose-your-path), so a testnet write cannot be mistaken for hackathon proof.
 
-The dev API binds to `127.0.0.1:8787` and Vite proxies `/api` to it. Do not expose this prototype publicly: it has no user authentication, and `.local/data.json` is intended for one local operator. Public deployment needs authentication, user isolation, and a persistence service.
-
-Production builds render a public, interactive replay of the verified Mainnet decision instead of exposing the local write API. The replay is explicitly labeled and needs no server credentials. Its milestone count is a verified snapshot that must be updated after new confirmed product writes. The full live review flow remains available with `npm run dev` until authentication and durable hosted storage are implemented.
-The production replay is deployed at [spendmemory.vercel.app](https://spendmemory.vercel.app/). It was anonymously reachable and its JavaScript asset contained the confirmed blob ID without the Walrus private key variable in a 2026-10-28 check.
+The dev API binds to `127.0.0.1:8787` and Vite proxies `/api` to it. Its proposals are stored in ignored `.local/data.json` for one local operator. The production Vercel app uses a serverless API and stores proposal history in each visitor's browser; confirmed decisions are shared in Walrus. The user chose open writes for visitors. Server credentials remain in Vercel secrets. The public API checks input lengths and allows writes while the confirmed namespace count is below 100; this count check is not an atomic quota or abuse defense.
 
 ## Scripts
 
@@ -49,10 +46,9 @@ npm run dev    # local API and frontend
 
 ## Submission work remaining
 
-- The local `.env` now has Walrus Memory Mainnet account and delegate credentials. A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. One explicitly fictional product decision was confirmed on Mainnet; after restart, recall changed a matching proposal from `review` to `decline`. The app has 1 of the required 10 confirmed product memories.
-- Complete and verify at least 10 meaningful Mainnet memories; preserve blob IDs and demonstrate the learning loop across a restart.
-- Add operator authentication and durable storage before any public demo deployment.
-- Publish the project repository, working demo, and blog post; record a 2–3 minute video.
+- A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. The original fictional product decision changed a matching proposal from `review` to `decline` after restart. The product namespace now has 50 confirmed Mainnet memories, including 49 labeled fictional seed decisions.
+- Verify the hosted evaluation and write flow after deployment; preserve confirmed blob IDs.
+- Publish a blog post and record a 2–3 minute demo video.
 - Confirm the event's special prize discrepancy with the organizers: the event page lists agent payments while the rules list a mystery bounty.
 
-No Mainnet writes, deployment, publication, or submission are claimed by this repository alone.
+Submission has not been completed.

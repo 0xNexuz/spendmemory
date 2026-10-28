@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Check, Copy, Github, LockKeyhole, RotateCcw } from 'lucide-react';
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
+import { useActiveSection, useScrolled } from './useActiveSection';
 import './public-demo.css';
 
 const blobId = 'VpDjzjIwtRW1UQJ8LOrUjUp2rbfV-RaIU36yB8DNSdg';
@@ -34,6 +35,8 @@ function ReviewerFigure({ learned }: { learned: boolean }) {
 export function PublicDemo() {
   const [learned, setLearned] = useState(false);
   const [copied, setCopied] = useState(false);
+  const scrolled = useScrolled(12);
+  const section = useActiveSection(['top', 'replay', 'receipt'], 'top');
 
   async function copyBlob() {
     try {
@@ -48,9 +51,15 @@ export function PublicDemo() {
   }
 
   return <main className="sm-page">
-    <header className="sm-header">
-      <a className="sm-brand" href="#top" aria-label="SpendMemory, back to top"><StippleMark/><span>SpendMemory</span></a>
-      <a className="sm-link-quiet" href={repoUrl} target="_blank" rel="noreferrer"><Github size={17}/> Source on GitHub</a>
+    <header className={`sm-header${scrolled ? ' is-stuck' : ''}`}>
+      <div className="sm-header-inner">
+        <a className="sm-brand" href="#top" aria-label="SpendMemory, back to top"><StippleMark/><span>SpendMemory</span></a>
+        <nav className="sm-nav" aria-label="Page">
+          <a href="#replay" aria-current={section === 'replay' ? 'location' : undefined}>Replay</a>
+          <a href="#receipt" aria-current={section === 'receipt' ? 'location' : undefined}>Receipt</a>
+          <a className="sm-nav-repo" href={repoUrl} target="_blank" rel="noreferrer" aria-label="Source on GitHub"><Github size={16}/><span>Source</span></a>
+        </nav>
+      </div>
     </header>
 
     <section className="sm-hero" id="top">
@@ -117,7 +126,7 @@ export function PublicDemo() {
       </div>
     </section>
 
-    <section className="sm-section">
+    <section className="sm-section" id="receipt">
       <div className="sm-section-head">
         <div>
           <h2>Memory with a real ID</h2>

@@ -62,8 +62,8 @@ The learning loop has been run against Walrus Mainnet and Sui Mainnet, not a tes
 
 | Sponsor | Used for | Where |
 | --- | --- | --- |
-| **Tatum** | Sui Mainnet GraphQL RPC: live SUI balance for the proposal's wallet, and transaction lookup by digest. The API key is sent server-side as `x-api-key`. | [`server/integrations.js`](server/integrations.js) |
-| **Walrus Memory** | `@mysten-incubation/memwal` SDK: recall decisions, write new ones, poll write jobs until a blob ID is returned, and list the namespace for the live count. Only the Mainnet relayer is accepted. | [`server/integrations.js`](server/integrations.js), [`api/route.js`](api/route.js) |
+| **Tatum** | Sui Mainnet GraphQL RPC: live SUI balance for the proposal's wallet, and payment verification. If you paste the digest of a payment you already made, Tatum fetches the transaction and SpendMemory checks that it succeeded, that your wallet paid, and that another address received exactly the proposed SUI. A verified payment is saved with the decision. The API key is sent server-side as `x-api-key`. | [`server/integrations.js`](server/integrations.js), [`server/policy.js`](server/policy.js) |
+| **Walrus Memory** | `@mysten-incubation/memwal` SDK: recall decisions, write new ones with an idempotency key, poll write jobs until a blob ID is returned, and list the namespace for the live count. Only the Mainnet relayer is accepted. | [`server/integrations.js`](server/integrations.js), [`server/hosted.js`](server/hosted.js) |
 
 Remove either one and the core loop stops: without Tatum there is no live balance check, and without Walrus there is nothing to recall.
 
@@ -72,7 +72,9 @@ Remove either one and the core loop stops: without Tatum there is no live balanc
 - **No payments, ever.** SpendMemory does not sign, hold keys for, or send transactions. It only reads balances and transactions.
 - **Memory advises, people decide.** A recalled approval can only suggest "consider approval". Not having enough SUI is a hard stop that no memory can override.
 - **Exact matching only.** Only structured SpendMemory records with the same merchant and category influence a brief, so unrelated memories cannot leak in.
-- **No blind retries.** A decision is locked while its write is pending. If the outcome is uncertain, the app asks you to check the Walrus account instead of writing a possible duplicate.
+- **One decision per proposal.** Each hosted write carries an idempotency key derived from the proposal, and a proposal that already has a saved decision is refused. A decision is locked while its write is pending; if the outcome is uncertain, the app asks you to check the Walrus account instead of writing a possible duplicate.
+- **Signed proposals.** The hosted API only saves decisions for proposals it evaluated itself, using an HMAC-signed ticket that expires after 30 minutes. A verified payment can only enter memory through that ticket, so a browser cannot claim a payment Tatum did not see.
+- **Payment checks only add caution.** A payment that does not match can turn "consider approval" into "review", never the other way round.
 - **Secrets stay on the server.** Tatum and Walrus credentials live in `.env` locally and in Vercel environment variables when hosted. They are never sent to the browser.
 
 ## Two ways to run it
@@ -82,9 +84,9 @@ Remove either one and the core loop stops: without Tatum there is no live balanc
 | URL | [spendmemory.vercel.app](https://spendmemory.vercel.app/) | `http://127.0.0.1:5173` |
 | API | Vercel serverless function, [`api/route.js`](api/route.js) | Express server, [`server/index.js`](server/index.js) |
 | Your proposal history | Stored in your browser | Stored in `.local/data.json` (ignored by Git) |
-| Confirmed decisions | Shared Walrus Mainnet namespace | Your own Walrus account and namespace |
-| Writes | Open to visitors, capped at 100 confirmed memories | Single local operator |
-| Extra | [Verified replay](https://spendmemory.vercel.app/?replay=1) of the first learning loop | Transaction lookup, memory trail |
+| Confirmed decisions | Shared visitor namespace `spendmemory-user-decisions-v1` | Your own Walrus account and namespace |
+| Writes | Open to visitors: 5 per connection per 10 minutes, 100 in total | Single local operator |
+| Extra | Payment verification, [verified replay](https://spendmemory.vercel.app/?replay=1) of the first learning loop | Transaction lookup, memory trail |
 
 ## Run locally
 
@@ -114,7 +116,7 @@ Create a Mainnet Walrus Memory account and delegate key at [memory.walrus.xyz](h
 ## Scripts
 
 ```bash
-npm test       # exact SUI/MIST parsing and policy tests
+npm test       # policy, payment reconciliation and hosted API tests (no network needed)
 npm run build  # TypeScript check and production bundle
 npm run dev    # local API and frontend together
 ```
@@ -122,11 +124,12 @@ npm run dev    # local API and frontend together
 ## Project structure
 
 ```text
-api/route.js                 Vercel serverless API for the public app
+api/route.js                 Vercel entry point; wires real integrations into server/hosted.js
 server/
   index.js                   Local Express API
+  hosted.js                  Public API: tickets, validation, limits, duplicate checks
   integrations.js            Tatum GraphQL and Walrus Memory clients
-  policy.js                  Amount parsing, memory matching, recommendation policy
+  policy.js                  Amount parsing, memory matching, recommendation policy, payment reconciliation
   store.js                   Local proposal storage
 src/
   LiveApp.tsx                Public app (production homepage)
@@ -135,7 +138,7 @@ src/
   art/                       Hand-drawn artwork, drawn in code
 public/art/                  Stippled head images used by the artwork
 scripts/seed-demo-memories.mjs  Seeds labelled fictional demo decisions
-tests/policy.test.js         Policy and parsing tests
+tests/                       Policy, reconciliation and hosted API tests
 ```
 
 ## Design
@@ -144,10 +147,11 @@ The interface is drawn as an inventor's notebook. The hero artwork merges three 
 
 ## Known limitations
 
-- **Open public writes.** Anyone can save a decision from the hosted app. The 100-memory cap is checked before each write but is not atomic, and there is no per-visitor rate limit. A proposal ticket stays valid for 30 minutes and can be reused within that time.
+- **Open public writes.** Anyone can save a decision from the hosted app. The per-connection limit lives in each serverless instance, so it slows a flood but is not a hard guarantee; a Vercel firewall rate-limit rule on `POST /api/route?action=remember` is the durable control. The 100-memory cap is checked before each write but is not atomic.
 - **Shared memory.** Hosted decisions go into one shared Walrus account, so one visitor's decisions influence another visitor's brief for the same merchant and category.
 - **Browser-local history.** Hosted proposal history lives in each visitor's browser and does not follow them across devices.
-- **Demo data.** Every memory in the namespace today describes a fictional scenario (see [Proof on Mainnet](#proof-on-mainnet)).
+- **User-reported decisions.** Visitor decisions are what the visitor says they decided. Only decisions saved with a verified payment are tied to something that happened on chain.
+- **Demo data.** The memories in `spendmemory-mainnet` describe fictional scenarios (see [Proof on Mainnet](#proof-on-mainnet)) and do not affect hosted recommendations.
 
 ## Before submission
 
@@ -160,4 +164,4 @@ Submission has not been completed.
 
 ## Visitor and demo memory separation
 
-The hosted app uses `spendmemory-user-decisions-v1` for visitor recall and writes. Existing examples remain in `spendmemory-mainnet` and do not affect hosted recommendations. The app displays separate visitor and demo counts. Visitor decisions are user-reported; the app does not verify purchases.
+The hosted app uses `spendmemory-user-decisions-v1` for visitor recall and writes. Existing examples remain in `spendmemory-mainnet` and do not affect hosted recommendations. The app displays separate visitor and demo counts. Visitor decisions are user-reported unless they were saved with a payment that Tatum verified.

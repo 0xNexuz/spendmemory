@@ -121,7 +121,7 @@ export function LiveApp() {
 
     <section className="sm-ledger" aria-label="Live memory count">
       <dl>
-        <div><dt>Visitor decision memories</dt><dd><strong>{status?.memoryCount ?? '…'}</strong><span>Read live from the Walrus namespace.</span></dd></div>
+        <div><dt>Visitor decision memories</dt><dd><strong>{status?.memoryCount ?? '…'}</strong><span>All wallets combined, read live from Walrus. Each wallet only learns from its own.</span></dd></div>
         <div><dt>Test memories (confirmed Mainnet writes)</dt><dd><strong>{demoCount ?? '…'}</strong><span>Created during testing with example decisions. Real Walrus writes with confirmed blob IDs; excluded from visitor recommendations.</span></dd></div>
         <div><dt>Public write cap</dt><dd><strong>{status?.maxMemories ?? '…'}</strong><span>Evaluation stays open after the cap.</span></dd></div>
       </dl>
@@ -133,7 +133,7 @@ export function LiveApp() {
     </div>}
 
     <section className="sm-section" id="review">
-      <div className="sm-section-head"><div><h2>Review a payment</h2><p>Use a public Sui address. Merchant and category are labels for memory, not an order or a payment.</p></div></div>
+      <div className="sm-section-head"><div><h2>Review a payment</h2><p>Memory is kept per wallet: only decisions saved for the Sui address you enter shape its review. Merchant and category are labels, not an order or a payment.</p></div></div>
       <div className="lv-grid">
         <form onSubmit={evaluate} className="sm-sheet lv-form">
           <span className="sm-tape" aria-hidden="true"/>
@@ -158,7 +158,7 @@ export function LiveApp() {
             <span key={`${selected.id}-${selected.evaluation.recommendation}`} className={`sm-verdict lv-verdict ${selected.evaluation.recommendation}`}>{VERDICT[selected.evaluation.recommendation] ?? selected.evaluation.recommendation}</span>
             <dl className="sm-rows">
               <div><dt>Tatum balance</dt><dd>{selected.evaluation.chainVerified ? `${selected.evaluation.balanceSui} SUI` : 'Unverified'}</dd></div>
-              <div><dt>Walrus recall</dt><dd>{selected.evaluation.memoryVerified ? `${selected.evaluation.matchedMemories.length} matching` : 'Unverified'}</dd></div>
+              <div><dt>Walrus recall</dt><dd>{selected.evaluation.memoryVerified ? `${selected.evaluation.matchedMemories.length} for this wallet` : 'Unverified'}</dd></div>
             
               {selected.evaluation.payment && <div><dt>Payment on Sui</dt><dd className={selected.evaluation.payment.matches ? 'lv-ok' : 'lv-warn'}>{!selected.evaluation.payment.checked ? 'Could not check' : selected.evaluation.payment.matches ? `Verified, ${selected.amountSui} SUI paid` : selected.evaluation.payment.succeeded ? 'Does not match' : 'Transaction failed'}</dd></div>}
             </dl>
@@ -180,13 +180,13 @@ export function LiveApp() {
               : <p className="lv-note">Write outcome uncertain. Check the Walrus account before making another proposal.</p>)}
             {selected.state === 'confirmed' && <div className="lv-confirmed"><CheckCircle2 size={19}/><span>Confirmed blob <code title={selected.blobId}>{shortId(selected.blobId || '')}</code>{selected.evaluation.payment?.matches ? ', saved with the verified payment' : ''}</span></div>}
             {selected.state === 'failed' && <p className="lv-note">Write failed. Make a new proposal before trying again.</p>}
-          </> : <div className="lv-empty"><h3>Your brief appears here</h3><p>Fill in the proposal to see the live Tatum balance and any matching decisions recalled from Walrus.</p></div>}
+          </> : <div className="lv-empty"><h3>Your brief appears here</h3><p>Fill in the proposal to see the live Tatum balance and any past decisions Walrus recalls for this wallet.</p></div>}
         </article>
       </div>
     </section>
 
     <section className="sm-section" id="history">
-      <div className="sm-section-head"><div><h2>This browser's reviews</h2><p>Proposal history stays on this device. Confirmed decisions are shared through Walrus.</p></div></div>
+      <div className="sm-section-head"><div><h2>This browser's reviews</h2><p>Proposal history stays on this device. Confirmed decisions are stored on Walrus with the wallet they were made for.</p></div></div>
       {entries.length ? <div className="lv-history">
         {entries.map((entry) => <button type="button" key={entry.id} className={selected?.id === entry.id ? 'current' : ''} onClick={() => { setSelectedId(entry.id); document.getElementById('review')?.scrollIntoView({ behavior: 'smooth' }); }}>
           <span className="lv-h-main"><strong>{entry.merchant}</strong><small>{entry.category}, {entry.amountSui} SUI</small></span>

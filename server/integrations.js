@@ -62,14 +62,14 @@ const RECALL_LIMIT = 100;
 
 export async function recall(proposal, namespace) {
   const client = memoryClient(namespace);
-  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}`, limit: RECALL_LIMIT });
+  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}${proposal.walletKey ? ` for wallet ${proposal.walletKey}` : ''}`, limit: RECALL_LIMIT });
   return response.results || [];
 }
 
 /** The most recent memories in a namespace, used to spot a proposal that already has a saved decision. */
 export async function recallByProposal(proposal, namespace) {
   const client = memoryClient(namespace);
-  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}`, limit: RECALL_LIMIT, sort: 'recent' });
+  const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}${proposal.walletKey ? ` for wallet ${proposal.walletKey}` : ''}`, limit: RECALL_LIMIT, sort: 'recent' });
   return response.results || [];
 }
 

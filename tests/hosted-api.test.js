@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, WRITE_LIMIT } from '../server/hosted.js';
+import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, walletKey, WRITE_LIMIT } from '../server/hosted.js';
 import { applyPaymentCheck, reconcilePayment } from '../server/policy.js';
 
 const SECRET = 'test-secret';
@@ -245,4 +245,34 @@ test('Walrus timestamps are read as ISO strings, seconds or milliseconds', () =>
   assert.equal(createdAtMs('not a date'), null);
   assert.equal(createdAtMs(undefined), null);
   assert.equal(recentCount([{ created_at: ms - 1000 }, { created_at: ms - 11 * 60_000 }, {}], ms), 1);
+});
+
+test('memory is per wallet: another wallet\'s decisions do not shape this review', async () => {
+  const mine = walletKey(WALLET);
+  const theirs = walletKey(OTHER);
+  const memory = (key, decision) => ({ text: JSON.stringify({ app: 'spendmemory', v: 1, merchant: 'democloud subscription', category: 'software', decision, walletKey: key }), blob_id: `${decision}-${key}` });
+  const { deps } = fakes({ recall: async () => [memory(theirs, 'decline'), memory(theirs, 'decline'), memory(mine, 'approve')] });
+  const res = await call(createHandler(deps), { method: 'POST', action: 'evaluate', body: proposalBody });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.evaluation.matchedMemories.map((m) => m.blobId), [`approve-${mine}`]);
+  assert.equal(res.body.evaluation.recommendation, 'consider');
+  assert.equal(readTicket(res.body.ticket, SECRET, 1_700_000_000_000).walletKey, mine);
+});
+
+test('a saved decision is stored with its wallet key, not the address', async () => {
+  const { deps, calls } = fakes();
+  const handler = createHandler(deps);
+  const evaluated = await call(handler, { method: 'POST', action: 'evaluate', body: { ...proposalBody, walletAddress: WALLET.toUpperCase().replace('0X', '0x') } });
+  await call(handler, { method: 'POST', action: 'remember', body: { ticket: evaluated.body.ticket, decision: 'decline', reason: 'Not this month, thanks.' } });
+  const { memory } = calls.remember[0];
+  assert.equal(memory.walletKey, walletKey(WALLET));
+  assert.equal(JSON.stringify(memory).includes(WALLET.slice(2)), false);
+});
+
+test('a ticket issued before per-wallet memory must be evaluated again', async () => {
+  const { deps, calls } = fakes();
+  const old = signTicket({ id: 'p-old', merchant: 'm', category: 'c', amountSui: '1', createdAt: 'x', payment: null, expiresAt: 1_700_000_100_000 }, SECRET);
+  const res = await call(createHandler(deps), { method: 'POST', action: 'remember', body: { ticket: old, decision: 'decline', reason: 'Saved from an old tab.' } });
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.remember.length, 0);
 });

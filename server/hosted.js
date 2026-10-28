@@ -64,6 +64,19 @@ export function alreadySaved(results, proposalId) {
   });
 }
 
+/**
+ * Memories belong to the wallet they were saved for. The key is a hash of the lower-cased address,
+ * so memory text does not carry the address itself. It is pseudonymous, not secret: addresses are public.
+ */
+export function walletKey(address) {
+  return `w_${createHash('sha256').update(String(address).trim().toLowerCase()).digest('hex').slice(0, 32)}`;
+}
+
+/** Keeps only memories saved for this wallet. */
+export function forWallet(memories, key) {
+  return memories.filter((m) => m.walletKey === key);
+}
+
 export function idempotencyKey(proposalId) {
   return `spendmemory-proposal-${createHash('sha256').update(String(proposalId)).digest('hex').slice(0, 32)}`;
 }
@@ -114,14 +127,15 @@ export function createHandler(deps) {
         if (merchant.length < 2 || merchant.length > 80 || category.length < 2 || category.length > 50 || !ADDRESS.test(walletAddress)) throw new ClientError(400, 'Enter a merchant, category, and valid Sui address.');
         if (txDigest && !DIGEST.test(txDigest)) throw new ClientError(400, 'That does not look like a Sui transaction digest.');
 
-        const proposal = { id: randomUUID(), merchant, category, walletAddress, amountMist: String(amountMist), amountSui: mistToSui(amountMist), createdAt: new Date(now()).toISOString() };
+        const wallet = walletKey(walletAddress);
+        const proposal = { id: randomUUID(), merchant, category, walletAddress, walletKey: wallet, amountMist: String(amountMist), amountSui: mistToSui(amountMist), createdAt: new Date(now()).toISOString() };
         const [balanceResult, memoryResult, txResult] = await Promise.allSettled([
           deps.getBalance(walletAddress),
           deps.recall(proposal, LIVE_NAMESPACE),
           txDigest ? deps.getTransaction(txDigest) : Promise.resolve(null),
         ]);
         const balanceMist = balanceResult.status === 'fulfilled' ? balanceResult.value : null;
-        const matches = memoryResult.status === 'fulfilled' ? relevantMemories(memoryResult.value, proposal) : [];
+        const matches = memoryResult.status === 'fulfilled' ? forWallet(relevantMemories(memoryResult.value, proposal), wallet) : [];
         let payment = null;
         if (txDigest) {
           if (txResult.status === 'fulfilled' && txResult.value) {
@@ -143,12 +157,13 @@ export function createHandler(deps) {
           payment,
         };
         const verifiedPayment = payment?.matches ? { digest: payment.digest, checkpoint: payment.checkpoint } : null;
-        const signed = signTicket({ id: proposal.id, merchant: normalizeLabel(merchant), category: normalizeLabel(category), amountSui: proposal.amountSui, createdAt: proposal.createdAt, payment: verifiedPayment, expiresAt: now() + TICKET_TTL_MS }, secret);
+        const signed = signTicket({ id: proposal.id, merchant: normalizeLabel(merchant), category: normalizeLabel(category), amountSui: proposal.amountSui, createdAt: proposal.createdAt, walletKey: wallet, payment: verifiedPayment, expiresAt: now() + TICKET_TTL_MS }, secret);
         return send(res, 200, { proposal, evaluation, ticket: signed });
       }
 
       if (action === 'remember' && req.method === 'POST') {
         const payload = readTicket(req.body?.ticket, secret, now());
+        if (!payload.walletKey) throw new ClientError(400, 'This review was made before memory became per wallet. Evaluate it again.');
         const decision = String(req.body?.decision || '');
         const reason = String(req.body?.reason || '').trim();
         if (!['approve', 'decline'].includes(decision) || reason.length < 8 || reason.length > 500) throw new ClientError(400, 'Choose approve or decline and give a reason of 8–500 characters.');
@@ -159,7 +174,7 @@ export function createHandler(deps) {
         if (existing.length >= MAX_MEMORIES) throw new ClientError(429, 'Public demo memory cap reached. Evaluation remains available.');
         // Shared across every serverless instance: Walrus records when each memory was created.
         if (recentCount(existing, now()) >= GLOBAL_WRITE_LIMIT) throw new ClientError(429, 'Many decisions were saved in the last few minutes. Try again shortly.');
-        const memory = { app: 'spendmemory', v: 1, source: 'public-web', scenarioType: 'user-reported', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id };
+        const memory = { app: 'spendmemory', v: 1, source: 'public-web', scenarioType: 'user-reported', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id, walletKey: payload.walletKey };
         if (payload.payment) memory.payment = { digest: payload.payment.digest, checkpoint: payload.payment.checkpoint, verifiedBy: 'tatum-sui-graphql' };
         const accepted = await deps.beginRemember(memory, LIVE_NAMESPACE, { idempotencyKey: idempotencyKey(payload.id) });
         return send(res, 202, { jobId: accepted.job_id });

@@ -43,7 +43,7 @@ flowchart LR
 3. **Brief.** A small, deterministic policy turns that evidence into a suggestion: review manually, consider approval, or decline and investigate.
 4. **Decide.** A person approves or declines and writes the reason.
 5. **Remember.** The decision is written to Walrus Memory on Mainnet. It only counts as confirmed once Walrus returns a blob ID.
-6. **Recall.** The next matching review sees that decision, and the suggestion changes.
+6. **Recall.** The next review of that wallet with the same merchant and category sees that decision, and the suggestion changes.
 
 ## Proof on Mainnet
 
@@ -71,7 +71,7 @@ Remove either one and the core loop stops: without Tatum there is no live balanc
 
 - **No payments, ever.** SpendMemory does not sign, hold keys for, or send transactions. It only reads balances and transactions.
 - **Memory advises, people decide.** A recalled approval can only suggest "consider approval". Not having enough SUI is a hard stop that no memory can override.
-- **Exact matching only.** Only structured SpendMemory records with the same merchant and category influence a brief, so unrelated memories cannot leak in.
+- **Exact matching, per wallet.** Only structured SpendMemory records saved for the same wallet, merchant and category influence a brief, so other wallets' decisions and unrelated memories cannot leak in.
 - **One decision per proposal.** Each hosted write carries an idempotency key derived from the proposal, and a proposal that already has a saved decision is refused. A decision is locked while its write is pending; if the outcome is uncertain, the app asks you to check the Walrus account instead of writing a possible duplicate.
 - **Signed proposals.** The hosted API only saves decisions for proposals it evaluated itself, using an HMAC-signed ticket that expires after 30 minutes. A verified payment can only enter memory through that ticket, so a browser cannot claim a payment Tatum did not see.
 - **Payment checks only add caution.** A payment that does not match can turn "consider approval" into "review", never the other way round.
@@ -84,7 +84,7 @@ Remove either one and the core loop stops: without Tatum there is no live balanc
 | URL | [spendmemory.vercel.app](https://spendmemory.vercel.app/) | `http://127.0.0.1:5173` |
 | API | Vercel serverless function, [`api/route.js`](api/route.js) | Express server, [`server/index.js`](server/index.js) |
 | Your proposal history | Stored in your browser | Stored in `.local/data.json` (ignored by Git) |
-| Confirmed decisions | Shared visitor namespace `spendmemory-user-decisions-v1` | Your own Walrus account and namespace |
+| Confirmed decisions | Visitor namespace `spendmemory-user-decisions-v1`, each decision tagged with its wallet | Your own Walrus account and namespace |
 | Writes | Open to visitors: 15 per 10 minutes across everyone, 5 per connection, 100 in total | Single local operator |
 | Extra | Payment verification, [verified replay](https://spendmemory.vercel.app/?replay=1) of the first learning loop | Transaction lookup, memory trail |
 
@@ -148,7 +148,7 @@ The interface is drawn as an inventor's notebook, down to the last page: a signe
 ## Known limitations
 
 - **Open public writes.** Anyone can save a decision from the hosted app. Saves are limited to 15 per 10 minutes across all visitors, counted from the timestamps Walrus keeps for each memory, plus 5 per connection. These checks run just before each write, so a few simultaneous requests can slip past a limit or the 100-memory cap. A Vercel firewall rate-limit rule on `POST /api/route?action=remember` would add a per-IP limit at the edge; it is optional.
-- **Shared memory.** Hosted decisions go into one shared Walrus account, so one visitor's decisions influence another visitor's brief for the same merchant and category.
+- **Per-wallet memory, without proof of ownership.** Each decision is stored with a hash of the wallet address, and only that wallet's reviews recall it. Wallet addresses are public and the app does not ask for a signature, so anyone who enters an address can review it and save decisions for it.
 - **Browser-local history.** Hosted proposal history lives in each visitor's browser and does not follow them across devices.
 - **User-reported decisions.** Visitor decisions are what the visitor says they decided. Only decisions saved with a verified payment are tied to something that happened on chain.
 - **Demo data.** The memories in `spendmemory-mainnet` describe fictional scenarios (see [Proof on Mainnet](#proof-on-mainnet)) and do not affect hosted recommendations.
@@ -164,4 +164,4 @@ Submission has not been completed.
 
 ## Visitor and demo memory separation
 
-The hosted app uses `spendmemory-user-decisions-v1` for visitor recall and writes. Existing examples remain in `spendmemory-mainnet` and do not affect hosted recommendations. The app displays separate visitor and demo counts. Visitor decisions are user-reported unless they were saved with a payment that Tatum verified.
+The hosted app uses `spendmemory-user-decisions-v1` for visitor recall and writes. Existing examples remain in `spendmemory-mainnet` and do not affect hosted recommendations. The app displays separate visitor and demo counts. Visitor decisions are user-reported unless they were saved with a payment that Tatum verified. Each one is tagged with a hash of its wallet address and only affects that wallet's later reviews.

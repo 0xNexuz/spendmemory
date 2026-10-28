@@ -14,6 +14,7 @@ function memoryClient() {
     accountId: process.env.MEMWAL_ACCOUNT_ID,
     serverUrl: url,
     namespace: process.env.MEMWAL_NAMESPACE || 'spendmemory-mainnet',
+    preflightTimeoutMs: 20000,
   });
 }
 

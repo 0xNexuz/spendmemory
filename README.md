@@ -43,7 +43,7 @@ npm run dev    # local API and frontend
 
 ## Submission work remaining
 
-- The local `.env` now has Walrus Memory Mainnet account and delegate credentials. A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. Complete the first real product decision through the app and verify it changes a later recommendation.
+- The local `.env` now has Walrus Memory Mainnet account and delegate credentials. A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. One explicitly fictional product decision was confirmed on Mainnet; after restart, recall changed a matching proposal from `review` to `decline`. The app has 1 of the required 10 confirmed product memories.
 - Complete and verify at least 10 meaningful Mainnet memories; preserve blob IDs and demonstrate the learning loop across a restart.
 - Add operator authentication and durable storage before any public demo deployment.
 - Publish the project repository, working demo, and blog post; record a 2–3 minute video.

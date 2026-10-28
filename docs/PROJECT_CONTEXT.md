@@ -5,14 +5,14 @@
 - **Project:** SpendMemory, a human-controlled Sui payment review assistant whose recommendations learn from Walrus Memory.
 - **Repository:** Local Git repository in this folder; no remote configured.
 - **Stage:** DEVELOPMENT.
-- **Status:** Local prototype, Tatum Mainnet GraphQL reads, and isolated Walrus Mainnet write/recall VERIFIED; product decision loop UNVERIFIED.
+- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; one fictional product decision changed a later recommendation after restart.
 - **Updated:** 2026-10-28.
 
 ## Git State
 
 - **Branch/HEAD:** `master`; local root commit exists (see `git log -1`).
 - **Working tree:** Check `git status` for current changes. `node_modules`, `.env`, `.local`, and `dist` are ignored.
-- **Last verified milestone:** Walrus Mainnet health, read, write confirmation, and recall passed on 2026-10-28 in an isolated test namespace.
+- **Last verified milestone:** Product demo went from `review` to `decline` after restart through a confirmed, recalled Mainnet decision memory on 2026-10-28.
 
 ## Hackathon Context
 
@@ -43,8 +43,9 @@
 - **Implemented:** Proposal form, live Tatum balance call path, Walrus recall path, deterministic policy, human decision write/confirm path with known-job reconciliation, transaction lookup, local history, responsive UI, setup docs.
 - **Verified:** Tatum key is configured in ignored `.env`; Mainnet GraphQL balance and transaction reads succeeded on 2026-10-28. Live method discovery listed GraphQL only; JSON-RPC POST returned 404, so the app was migrated to GraphQL.
 - **Verified:** Walrus Mainnet credentials are configured in ignored `.env`. Health and recall succeeded. A single integration-check memory was confirmed and recalled in the separate `spendmemory-integration-check` namespace, blob ID `5lVVwlcm0n7S5vzohoc_GYZcREzQO0FV7mZ9IZdKPy4`. This is test data, not a product decision memory or submission-count evidence.
-- **Unverified:** Full product decision write/recall flow, Mainnet product memory count, end-to-end learning across a real restart.
-- **P0:** Run a real product decision flow with operator-selected scenario and reason; confirm 10 meaningful product memories and restart behavior.
+- **Verified:** User-provided wallet address initially returned 0 SUI through Tatum, so a public funded Mainnet address was used for both fictional demo proposals. A later recheck of the user's address returned 5.27027 SUI (5,270,270,000 MIST), independently matched by Tatum and Sui's public Mainnet GraphQL endpoint. A `DemoCloud subscription` / `software` / 0.02 SUI proposal initially returned `review`; a delegated `decline` decision produced confirmed Mainnet blob ID `VpDjzjIwtRW1UQJ8LOrUjUp2rbfV-RaIU36yB8DNSdg` (job `bfbf13d9-babe-4877-8cee-15a12d221523`). After a real server restart, the same proposal returned `decline`, with one matching recalled memory and the same blob ID. No payment was sent.
+- **Count:** 1 confirmed product decision memory on Mainnet, explicitly fictional demo content; 9 more confirmed memories needed to reach the event minimum. Two useful local demo records remain (before and after); the timed-out local proposal was removed.
+- **P0:** Add nine more purposeful decision memories through the app, preserving confirmed blob IDs and clear demo labeling. Recheck learning behavior after more writes.
 - **P1:** Authenticated public deployment, blog, demo video, submission evidence.
 
 ## Verification
@@ -58,6 +59,9 @@
 | 2026-10-28 | Tatum Mainnet GraphQL | VERIFIED: balance query returned 0 MIST for a public example address; transaction query returned SUCCESS and a checkpoint for a live digest. JSON-RPC POST returned 404. |
 | 2026-10-28 | `npm test` and `npm run build` | VERIFIED: 4 policy tests passed; TypeScript and Vite production build passed with the runner config loader. |
 | 2026-10-28 | Walrus Mainnet SDK | VERIFIED: health and empty recall succeeded; isolated test write job `a462c967-d77e-4765-8d00-de35702dce77` confirmed blob ID `5lVVwlcm0n7S5vzohoc_GYZcREzQO0FV7mZ9IZdKPy4`, and recall returned the same blob. App has 0 confirmed decision memories. |
+| 2026-10-28 | Product Mainnet loop | VERIFIED: Tatum balance and Walrus recall in first proposal; confirmed decision write; server restart; second proposal changed from `review` to `decline` with the confirmed blob recalled. Initial SDK `/version` preflight timed out at the 5s default; increasing `preflightTimeoutMs` to 20s resolved it. |
+| 2026-10-28 | `npm test` and `npm run build` | VERIFIED after timeout adjustment: 4 policy tests passed; TypeScript and Vite build passed. |
+| 2026-10-28 | User wallet balance recheck | VERIFIED: Tatum and Sui public Mainnet GraphQL both returned 5,270,270,000 MIST (5.27027 SUI), all in coin balance. This supersedes the earlier 0 SUI observation. |
 
 ## Decision Log
 
@@ -75,4 +79,4 @@
 
 ## Next Action
 
-- Run a product decision flow with a user-approved scenario, then verify write, confirmation, recall, and learning across restart. Grow to 10 meaningful Mainnet decisions. Deployment, publication, and submission are separate authorization boundaries.
+- Grow from one to at least ten confirmed Mainnet product decisions, with honest demo labeling and a visible learning loop. Then prepare public repo, demo video, and blog. Deployment, publication, and submission are separate authorization boundaries.

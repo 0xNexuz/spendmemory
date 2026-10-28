@@ -85,7 +85,7 @@ Remove either one and the core loop stops: without Tatum there is no live balanc
 | API | Vercel serverless function, [`api/route.js`](api/route.js) | Express server, [`server/index.js`](server/index.js) |
 | Your proposal history | Stored in your browser | Stored in `.local/data.json` (ignored by Git) |
 | Confirmed decisions | Shared visitor namespace `spendmemory-user-decisions-v1` | Your own Walrus account and namespace |
-| Writes | Open to visitors: 5 per connection per 10 minutes, 100 in total | Single local operator |
+| Writes | Open to visitors: 15 per 10 minutes across everyone, 5 per connection, 100 in total | Single local operator |
 | Extra | Payment verification, [verified replay](https://spendmemory.vercel.app/?replay=1) of the first learning loop | Transaction lookup, memory trail |
 
 ## Run locally
@@ -147,7 +147,7 @@ The interface is drawn as an inventor's notebook. The hero artwork merges three 
 
 ## Known limitations
 
-- **Open public writes.** Anyone can save a decision from the hosted app. The per-connection limit lives in each serverless instance, so it slows a flood but is not a hard guarantee; a Vercel firewall rate-limit rule on `POST /api/route?action=remember` is the durable control. The 100-memory cap is checked before each write but is not atomic.
+- **Open public writes.** Anyone can save a decision from the hosted app. Saves are limited to 15 per 10 minutes across all visitors, counted from the timestamps Walrus keeps for each memory, plus 5 per connection. These checks run just before each write, so a few simultaneous requests can slip past a limit or the 100-memory cap. A Vercel firewall rate-limit rule on `POST /api/route?action=remember` would add a per-IP limit at the edge; it is optional.
 - **Shared memory.** Hosted decisions go into one shared Walrus account, so one visitor's decisions influence another visitor's brief for the same merchant and category.
 - **Browser-local history.** Hosted proposal history lives in each visitor's browser and does not follow them across devices.
 - **User-reported decisions.** Visitor decisions are what the visitor says they decided. Only decisions saved with a verified payment are tied to something that happened on chain.

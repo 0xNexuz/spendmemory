@@ -157,12 +157,51 @@
 .sm-link-ink:hover svg{transform:translateX(4px)}
 .sm-footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:30px 0 40px;color:var(--ink-2);font-size:14px}
 
+/* Colophon: the notebook's last page */
+.sm-colophon{margin-top:120px;border-top:1.5px solid var(--ink);background:linear-gradient(rgba(226,213,184,.55),rgba(226,213,184,.25))}
+.sm-colophon-inner{width:min(1220px,100% - 48px);margin:0 auto;padding:52px 0 36px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(240px,.8fr) auto;gap:40px 56px;align-items:start}
+.sm-signoff-line{margin:0;font-family:'Reenie Beanie','Segoe Print','Bradley Hand',cursive;font-size:clamp(38px,4.6vw,58px);line-height:.98;color:var(--ink)}
+.sm-signature{position:relative;display:inline-flex;align-items:baseline;gap:12px;margin-top:22px;padding:0 6px 14px 0}
+.sm-signature-by{font-size:15px;color:var(--ink-2)}
+.sm-signature-name{font-family:'Reenie Beanie','Segoe Print','Bradley Hand',cursive;font-size:44px;line-height:1;color:var(--cobalt);transition:transform .45s var(--ease)}
+.sm-signature-stroke{position:absolute;left:58px;right:0;bottom:0;width:calc(100% - 58px);height:18px;overflow:visible}
+.sm-signature-stroke path{fill:none;stroke:var(--cobalt);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:0;transition:stroke-dashoffset .7s var(--ease)}
+.sm-signature:hover .sm-signature-name{transform:rotate(-3deg) translateY(-2px)}
+.sm-signature:hover .sm-signature-stroke path{animation:sm-sign .9s var(--ease)}
+@keyframes sm-sign{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.sm-pagecount{margin:18px 0 0;font-size:14px;color:var(--ink-2)}
+
+.sm-index-title{margin:6px 0 12px;font-weight:800;font-stretch:75%;font-size:20px}
+.sm-index ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.sm-index a{display:flex;align-items:baseline;gap:8px;padding:7px 0;font-size:15px;font-weight:600;transition:color .25s var(--ease),transform .3s var(--ease)}
+.sm-index-dots{flex:1;border-bottom:1.5px dotted var(--rule);transform:translateY(-4px);transition:border-color .25s}
+.sm-index-page{min-width:20px;text-align:right;font-family:Georgia,'Times New Roman',serif;font-style:italic;color:var(--ink-2);display:inline-flex;justify-content:flex-end}
+.sm-index a:hover{color:var(--cobalt);transform:translateX(4px)}
+.sm-index a:hover .sm-index-dots{border-color:var(--cobalt)}
+.sm-index a:hover .sm-index-page{color:var(--cobalt)}
+
+.sm-footer-stamp{width:140px;height:140px;transform:rotate(12deg);opacity:.85;mix-blend-mode:multiply;transition:transform .6s var(--ease),opacity .3s}
+.sm-footer-stamp:hover{transform:rotate(-4deg) scale(1.06);opacity:1}
+.sm-footer-stamp circle{fill:none;stroke:var(--red);stroke-width:3}
+.sm-footer-stamp text{fill:var(--red);font:800 12.5px Archivo,sans-serif;font-stretch:75%;letter-spacing:1.1px}
+.sm-footer-stamp .sm-footer-stamp-big{font-size:21px;letter-spacing:.6px}
+.sm-footer-stamp .sm-footer-stamp-small{font-size:15px;letter-spacing:2px}
+
+.sm-fineprint{width:min(1220px,100% - 48px);margin:0 auto;padding:18px 0 34px;border-top:1px dashed var(--rule);display:flex;justify-content:space-between;gap:12px 32px;flex-wrap:wrap;font-size:13.5px;color:var(--ink-2)}
+.sm-fineprint p{margin:0;max-width:78ch}
+.sm-fineprint a{font-weight:700;color:var(--ink);background:linear-gradient(currentColor,currentColor) 0 100%/100% 1.5px no-repeat;transition:background-size .3s var(--ease),color .3s}
+.sm-fineprint a:hover{color:var(--cobalt);background-size:0 1.5px}
+
 /* Hero entrance: the only page-load sequence besides the artwork's own */
 .sm-hero h1,.sm-hero-side{animation:sm-rise .9s var(--ease) both}
 .sm-hero-side{animation-delay:.18s}
 @keyframes sm-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 
 @media (max-width:980px){
+  .sm-colophon-inner{grid-template-columns:1fr auto;grid-template-areas:'sign stamp' 'index index'}
+  .sm-signoff{grid-area:sign}
+  .sm-footer-stamp{grid-area:stamp}
+  .sm-index{grid-area:index}
   .sm-hero{grid-template-columns:minmax(0,1fr);padding-top:40px}
   .sm-hero-side{grid-column:1}
   .sm-hero-side p{max-width:60ch}
@@ -194,6 +233,13 @@
   .sm-callout{flex-wrap:wrap;margin-top:80px}
   .sm-link-ink{margin-left:46px}
   .sm-footer{flex-direction:column;gap:6px}
+  .sm-colophon{margin-top:84px}
+  .sm-colophon-inner,.sm-fineprint{width:calc(100% - 32px)}
+  .sm-colophon-inner{gap:28px 12px;padding-top:40px}
+  .sm-signoff-line{font-size:34px}
+  .sm-signature-name{font-size:38px}
+  .sm-footer-stamp{width:88px;height:88px;margin-top:4px}
+  .sm-fineprint{flex-direction:column}
 }
 @media (max-width:420px){
   .sm-brand{font-size:17px;gap:8px}

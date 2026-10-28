@@ -54,8 +54,6 @@
 .lv-h-state.pending{background:#f3e2bd;color:#7a4f0e}
 .lv-h-state.failed{background:#f6ddd6;color:#8d2e22}
 .lv-history-empty{padding:22px;border:1.5px dashed var(--rule);color:var(--ink-2);margin:0}
-.lv-footer{margin-top:90px;border-top:1.5px solid var(--ink)}
-.lv-footer span:first-child{max-width:70ch}
 
 @media (max-width:980px){
   .lv-grid{grid-template-columns:1fr}

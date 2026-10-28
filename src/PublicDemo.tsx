@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Check, Copy, Github, LockKeyhole, RotateCcw } from 'lucide-react';
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
+import { SiteFooter } from './SiteFooter';
 import { useActiveSection, useScrolled } from './useActiveSection';
 import './public-demo.css';
 
@@ -161,6 +162,6 @@ export function PublicDemo() {
       <a href="/" className="sm-link-ink">Open the live app <ArrowRight size={16}/></a>
     </section>
 
-    <footer className="sm-footer"><span>SpendMemory, built for Total Recall 2026</span><span>Testing evidence: 50+ real Mainnet writes using example decisions.</span></footer>
+    <SiteFooter notice="Testing evidence: 50+ real Mainnet writes using example decisions. The scenario on this page is fictional; the write, its confirmation and the recall were real."/>
   </main>;
 }

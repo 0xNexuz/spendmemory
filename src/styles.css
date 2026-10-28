@@ -220,6 +220,8 @@ body{margin:0;min-width:320px;background:#ece3cf;font-synthesis:none;-webkit-fon
 .app-shell .history-status.decided{background:#dfeedd;color:#24563a}
 .app-shell .history-status.pending_memory{background:#f3e2bd;color:#7a4f0e}
 .app-shell .history-empty{border:1.5px dashed var(--rule);border-radius:2px;padding:22px;display:flex;align-items:center;gap:10px;color:var(--ink-2);font-size:14px}
+.app-shell footer a{font-weight:700;color:var(--ink);background:linear-gradient(currentColor,currentColor) 0 100%/100% 1.5px no-repeat;transition:background-size .3s var(--ease),color .3s}
+.app-shell footer a:hover{color:var(--cobalt);background-size:0 1.5px}
 .app-shell footer{padding:28px 0 0;margin-top:40px;border-top:1.5px solid var(--ink);display:flex;justify-content:space-between;gap:10px;color:var(--ink-2);font-size:13px}
 .app-shell .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}

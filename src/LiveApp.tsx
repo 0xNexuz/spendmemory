@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, Github, RefreshCw, X } from 'lucide-react';
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
+import { SiteFooter } from './SiteFooter';
 import { useActiveSection, useScrolled } from './useActiveSection';
 import './public-demo.css';
 import './live-app.css';
@@ -195,6 +196,6 @@ export function LiveApp() {
       </div> : <p className="lv-history-empty">No reviews in this browser yet.</p>}
     </section>
 
-    <footer className="sm-footer lv-footer"><span>This is a shared public demo. Visitor decisions are user-reported, not verified purchases. They are stored separately from test memories and shared across visitors. Do not enter private financial information or wallet keys.</span><span>Built for Total Recall 2026</span></footer>
+    <SiteFooter pages={status ? status.memoryCount : null} notice="This is a shared public demo. Visitor decisions are user-reported unless saved with a payment Tatum verified, and they are kept apart from test memories. Never enter a private key or private financial details."/>
   </main>;
 }

@@ -9,7 +9,7 @@ Every decision you save becomes memory for the next review. It never sends a pay
 
 [**Live app**](https://spendmemory.vercel.app/) · [**Verified replay**](https://spendmemory.vercel.app/?replay=1) · [**Source**](https://github.com/0xNexuz/spendmemory)
 
-Built for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/)
+Built by [0xNexuz](https://github.com/0xNexuz) for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/)
 
 <img src="public/og.jpg" alt="SpendMemory artwork: ink gears, a row of stippled heads turning from one review to the next, and the last head wired to pinned clippings of past decisions" width="100%" />
 
@@ -143,7 +143,7 @@ tests/                       Policy, reconciliation and hosted API tests
 
 ## Design
 
-The interface is drawn as an inventor's notebook. The hero artwork merges three ideas: sepia gears and ledger boxes for the review rules, a row of stippled heads turning from one review to the next, and the last head wired to pinned clippings of past decisions. Gears, ledger, wires and clippings are drawn in code in [`src/art/`](src/art), so they scale cleanly and animate: wires draw in on load, gears turn slowly, and hovering a clipping lifts it and lights its wire. Motion switches off for visitors who prefer reduced motion.
+The interface is drawn as an inventor's notebook, down to the last page: a signed colophon with an index and an ink stamp for the one rule that never bends. The hero artwork merges three ideas: sepia gears and ledger boxes for the review rules, a row of stippled heads turning from one review to the next, and the last head wired to pinned clippings of past decisions. Gears, ledger, wires and clippings are drawn in code in [`src/art/`](src/art), so they scale cleanly and animate: wires draw in on load, gears turn slowly, and hovering a clipping lifts it and lights its wire. Motion switches off for visitors who prefer reduced motion.
 
 ## Known limitations
 

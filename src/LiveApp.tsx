@@ -196,6 +196,6 @@ export function LiveApp() {
       </div> : <p className="lv-history-empty">No reviews in this browser yet.</p>}
     </section>
 
-    <SiteFooter pages={status ? status.memoryCount : null} notice="This is a shared public demo. Visitor decisions are user-reported unless saved with a payment Tatum verified, and they are kept apart from test memories. Never enter a private key or private financial details."/>
+    <SiteFooter pages={status ? status.memoryCount : null}/>
   </main>;
 }

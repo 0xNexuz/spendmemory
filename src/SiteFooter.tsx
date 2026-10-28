@@ -8,7 +8,7 @@ const REPO_URL = 'https://github.com/0xNexuz/spendmemory';
  * The notebook's last page: a handwritten sign-off by the author, an index of the other pages,
  * an ink stamp for the one rule that never bends, and the fine print.
  */
-export function SiteFooter({ notice, pages }: { notice: string; pages?: number | null }) {
+export function SiteFooter({ notice, pages }: { notice?: string; pages?: number | null }) {
   return <footer className="sm-colophon">
     <div className="sm-colophon-inner">
       <div className="sm-signoff">
@@ -43,7 +43,7 @@ export function SiteFooter({ notice, pages }: { notice: string; pages?: number |
     </div>
 
     <div className="sm-fineprint">
-      <p>{notice}</p>
+      {notice && <p>{notice}</p>}
       <p>Built by <a href={AUTHOR_URL} target="_blank" rel="noreferrer">{AUTHOR}</a> for Walrus × Tatum Total Recall, 2026.</p>
     </div>
   </footer>;

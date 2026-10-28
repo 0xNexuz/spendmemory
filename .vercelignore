@@ -1,0 +1,9 @@
+.env
+.env.*
+.local/
+.git/
+node_modules/
+.npm-cache/
+.pnpm-store/
+dist/
+*.log

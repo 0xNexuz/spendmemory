@@ -2,6 +2,9 @@
 
 A local-first payment review prototype for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/). It reads a Sui wallet balance through Tatum RPC, recalls matching past decisions from Walrus Memory, and gives a human a review brief. A human decision is stored on Walrus Mainnet and confirmed before the local app marks it complete. The app **does not send payments**.
 
+- [Public evidence replay](https://spendmemory.vercel.app/) on Vercel
+- [Public source repository](https://github.com/0xNexuz/spendmemory) on GitHub
+
 ## What the demo proves
 
 1. Review a proposal for a Sui wallet and payee. Tatum returns the live Mainnet SUI balance.
@@ -27,6 +30,7 @@ Open `http://127.0.0.1:5173`. Add your own `TATUM_API_KEY`, `MEMWAL_PRIVATE_KEY`
 The dev API binds to `127.0.0.1:8787` and Vite proxies `/api` to it. Do not expose this prototype publicly: it has no user authentication, and `.local/data.json` is intended for one local operator. Public deployment needs authentication, user isolation, and a persistence service.
 
 Production builds render a public, interactive replay of the verified Mainnet decision instead of exposing the local write API. The replay is explicitly labeled and needs no server credentials. Its milestone count is a verified snapshot that must be updated after new confirmed product writes. The full live review flow remains available with `npm run dev` until authentication and durable hosted storage are implemented.
+The production replay is deployed at [spendmemory.vercel.app](https://spendmemory.vercel.app/). It was anonymously reachable and its JavaScript asset contained the confirmed blob ID without the Walrus private key variable in a 2026-10-28 check.
 
 ## Scripts
 

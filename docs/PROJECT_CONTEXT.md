@@ -3,14 +3,14 @@
 ## Project Identity
 
 - **Project:** SpendMemory, a human-controlled Sui payment review assistant whose recommendations learn from Walrus Memory.
-- **Repository:** Local Git repository in this folder; no remote configured.
-- **Stage:** DEVELOPMENT.
-- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; one fictional product decision changed a later recommendation after restart. Public replay build prepared for GitHub and Vercel.
+- **Repository:** Local Git repository in this folder; `origin` is the public [GitHub repository](https://github.com/0xNexuz/spendmemory).
+- **Stage:** SUBMISSION_PREPARATION.
+- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; one fictional product decision changed a later recommendation after restart. Public GitHub repo and Vercel replay deployed.
 - **Updated:** 2026-10-28.
 
 ## Git State
 
-- **Branch/HEAD:** `master`; local root commit exists (see `git log -1`).
+- **Branch/HEAD:** `master` tracks `origin/master`; verify current HEAD with `git log -1` and remote with `gh api` after each push.
 - **Working tree:** Check `git status` for current changes. `node_modules`, `.env`, `.local`, and `dist` are ignored.
 - **Last verified milestone:** Product demo went from `review` to `decline` after restart through a confirmed, recalled Mainnet decision memory on 2026-10-28.
 
@@ -47,7 +47,7 @@
 - **Count:** 1 confirmed product decision memory on Mainnet, explicitly fictional demo content; 9 more confirmed memories needed to reach the event minimum. Two useful local demo records remain (before and after); the timed-out local proposal was removed.
 - **P0:** Add nine more purposeful decision memories through the app, preserving confirmed blob IDs and clear demo labeling. Recheck learning behavior after more writes.
 - **P1:** Authenticated public deployment, blog, demo video, submission evidence.
-- **Deployment preparation:** Production Vite build renders an interactive public replay of the confirmed before/after memory result; local development still renders the live app. The replay uses verified blob evidence and no secrets or write endpoint. Public milestone count is a manually maintained snapshot.
+- **Deployment:** Production Vite build renders an interactive public replay of the confirmed before/after memory result at [spendmemory.vercel.app](https://spendmemory.vercel.app/); local development still renders the live app. The replay uses verified blob evidence and no secrets or write endpoint. Public milestone count is a manually maintained snapshot. Vercel project `xreyys-projects/spendmemory` is connected to the GitHub repo.
 
 ## Verification
 
@@ -64,6 +64,7 @@
 | 2026-10-28 | `npm test` and `npm run build` | VERIFIED after timeout adjustment: 4 policy tests passed; TypeScript and Vite build passed. |
 | 2026-10-28 | User wallet balance recheck | VERIFIED: Tatum and Sui public Mainnet GraphQL both returned 5,270,270,000 MIST (5.27027 SUI), all in coin balance. This supersedes the earlier 0 SUI observation. |
 | 2026-10-28 | Public replay build | VERIFIED: 4 policy tests passed and `npm run build` produced a Vite production bundle. Browser rendering and hosted deployment remain unverified. |
+| 2026-10-28 | GitHub and Vercel | VERIFIED: public `0xNexuz/spendmemory` branch matched local commit `e9933c3` at first push; Vercel production deployment `dpl_9QdYRGFo1EYZ22ohNFoCueD62VaR` was READY at `https://spendmemory.vercel.app/`, anonymous HTTP 200; hosted JS contained the replay merchant and confirmed blob ID, with no `MEMWAL_PRIVATE_KEY` string. GitHub was connected to the Vercel project. |
 
 ## Decision Log
 
@@ -81,4 +82,4 @@
 
 ## Next Action
 
-- Publish the authorized GitHub repository and Vercel public replay, verify the hosted page, then grow from one to at least ten confirmed Mainnet product decisions with honest demo labeling. Prepare video and blog separately; submission remains a separate authorization boundary.
+- Grow from one to at least ten confirmed Mainnet product decisions with honest demo labeling; update the public replay count. Prepare video and blog. Submission remains a separate authorization boundary.

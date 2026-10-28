@@ -103,3 +103,7 @@
 ### 2026-10-28 — Separate visitor decisions from demo memories
 
 Approved by user. Hosted reads and writes now use spendmemory-user-decisions-v1; the existing spendmemory-mainnet namespace is retained for demo evidence. Status exposes separate visitor/demo/total counts. New decisions are user-reported, not independently verified purchases. Production build passed; hosted verification follows deployment.
+
+### 2026-10-28 — Clarify test memory labels
+
+User requested clearer judge-facing wording. UI calls the testing records "Test memories (confirmed Mainnet writes)" and explains that the writes and blob IDs are real, while decisions use example scenarios. Test memories remain excluded from visitor recommendations.

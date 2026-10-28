@@ -80,7 +80,7 @@ export function PublicDemo() {
 
     <section className="sm-ledger" aria-label="Verified milestones">
       <dl>
-        <div><dt>Mainnet memories</dt><dd><strong>50+ confirmed</strong><span>Live count in the app. Seeded demo records are labeled fictional.</span></dd></div>
+        <div><dt>Mainnet memories</dt><dd><strong>50+ confirmed</strong><span>Test memories: real, confirmed Mainnet writes created with example decisions during testing.</span></dd></div>
         <div><dt>Tatum reads</dt><dd><strong>Verified</strong><span>Sui balance and transaction data.</span></dd></div>
         <div><dt>Walrus write</dt><dd><strong>Confirmed</strong><span>The stored blob came back after a restart.</span></dd></div>
       </dl>
@@ -90,7 +90,7 @@ export function PublicDemo() {
       <div className="sm-section-head">
         <div>
           <h2>Same proposal, new context</h2>
-          <p>The scenario is fictional. The Mainnet write, its confirmation and the later recall were real.</p>
+          <p>This example decision was created during testing. Its Walrus Mainnet write, confirmed blob ID and later recall are real; it does not represent an actual purchase.</p>
         </div>
         <div className="sm-switch" role="group" aria-label="Replay step">
           <button type="button" aria-pressed={!learned} onClick={() => setLearned(false)}>Before memory</button>
@@ -131,7 +131,7 @@ export function PublicDemo() {
       <div className="sm-section-head">
         <div>
           <h2>Memory with a real ID</h2>
-          <p>One fictional decision was written to Walrus Memory on Mainnet and returned this confirmed blob ID. The app recalled the same blob after a server restart.</p>
+          <p>This test decision was stored on Walrus Mainnet and returned the confirmed blob ID below. The app recalled the same blob after a server restart. The decision uses an example scenario.</p>
         </div>
       </div>
       <div className="sm-receipt">
@@ -161,6 +161,6 @@ export function PublicDemo() {
       <a href="/" className="sm-link-ink">Open the live app <ArrowRight size={16}/></a>
     </section>
 
-    <footer className="sm-footer"><span>SpendMemory, built for Total Recall 2026</span><span>Evidence replay. 50+ confirmed Mainnet memories, including fictional demos.</span></footer>
+    <footer className="sm-footer"><span>SpendMemory, built for Total Recall 2026</span><span>Testing evidence: 50+ real Mainnet writes using example decisions.</span></footer>
   </main>;
 }

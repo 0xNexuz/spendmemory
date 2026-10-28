@@ -119,7 +119,7 @@ export function LiveApp() {
     <section className="sm-ledger" aria-label="Live memory count">
       <dl>
         <div><dt>Visitor decision memories</dt><dd><strong>{status?.memoryCount ?? '…'}</strong><span>Read live from the Walrus namespace.</span></dd></div>
-        <div><dt>Demo memories</dt><dd><strong>{demoCount ?? '…'}</strong><span>Excluded from visitor recommendations.</span></dd></div>
+        <div><dt>Test memories (confirmed Mainnet writes)</dt><dd><strong>{demoCount ?? '…'}</strong><span>Created during testing with example decisions. Real Walrus writes with confirmed blob IDs; excluded from visitor recommendations.</span></dd></div>
         <div><dt>Public write cap</dt><dd><strong>{status?.maxMemories ?? '…'}</strong><span>Evaluation stays open after the cap.</span></dd></div>
       </dl>
     </section>
@@ -189,6 +189,6 @@ export function LiveApp() {
       </div> : <p className="lv-history-empty">No reviews in this browser yet.</p>}
     </section>
 
-    <footer className="sm-footer lv-footer"><span>This is a shared public demo. Visitor decisions are user-reported, not verified purchases. They are stored separately from demo examples and shared across visitors. Do not enter private financial information or wallet keys.</span><span>Built for Total Recall 2026</span></footer>
+    <footer className="sm-footer lv-footer"><span>This is a shared public demo. Visitor decisions are user-reported, not verified purchases. They are stored separately from test memories and shared across visitors. Do not enter private financial information or wallet keys.</span><span>Built for Total Recall 2026</span></footer>
   </main>;
 }

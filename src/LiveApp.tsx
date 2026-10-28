@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, CheckCircle2, Fingerprint, ShieldCheck, Wallet } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, Github, RefreshCw, X } from 'lucide-react';
+import { MemoryArtwork } from './art/MemoryArtwork';
+import { StippleMark } from './art/StippleMark';
+import { useActiveSection, useScrolled } from './useActiveSection';
+import './public-demo.css';
 import './live-app.css';
 
 type Match = { blobId: string; decision: string; reason: string; createdAt: string };
@@ -7,6 +11,11 @@ type Evaluation = { recommendation: string; reasons: string[]; balanceSui: strin
 type Entry = { id: string; merchant: string; category: string; amountSui: string; walletAddress: string; createdAt: string; evaluation: Evaluation; ticket: string; state: 'open' | 'pending' | 'confirmed' | 'failed'; decision?: string; reason?: string; jobId?: string; blobId?: string };
 type Status = { network: string; memoryCount: number; demoMemoryCount: number; totalMemoryCount: number; maxMemories: number; maxReviewSui: string };
 const STORAGE = 'spendmemory-public-reviews-v1';
+const repoUrl = 'https://github.com/0xNexuz/spendmemory';
+
+const VERDICT: Record<string, string> = { review: 'Review manually', consider: 'Consider approval', decline: 'Decline or investigate' };
+const STATE: Record<Entry['state'], string> = { open: 'Open', pending: 'Saving', confirmed: 'Memory saved', failed: 'Write failed' };
+const shortId = (v: string) => (v.length > 22 ? `${v.slice(0, 10)}…${v.slice(-8)}` : v);
 
 async function request<T>(action: string, body?: unknown, extra = ''): Promise<T> {
   const response = await fetch(`/api/route?action=${action}${extra}`, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
@@ -15,9 +24,16 @@ async function request<T>(action: string, body?: unknown, extra = ''): Promise<T
   return data;
 }
 
+function readEntries(): Entry[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE) || '[]'); } catch { return []; }
+}
+function writeEntries(entries: Entry[]) {
+  try { localStorage.setItem(STORAGE, JSON.stringify(entries)); } catch { /* storage unavailable: history stays in memory */ }
+}
+
 export function LiveApp() {
   const [status, setStatus] = useState<Status | null>(null);
-  const [entries, setEntries] = useState<Entry[]>(() => { try { return JSON.parse(localStorage.getItem(STORAGE) || '[]'); } catch { return []; } });
+  const [entries, setEntries] = useState<Entry[]>(readEntries);
   const [selectedId, setSelectedId] = useState('');
   const [merchant, setMerchant] = useState('');
   const [category, setCategory] = useState('Software');
@@ -28,12 +44,17 @@ export function LiveApp() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const selected = entries.find(e => e.id === selectedId) || entries[0];
+  const selected = entries.find((e) => e.id === selectedId) || entries[0];
+  const scrolled = useScrolled(12);
+  const section = useActiveSection(['top', 'review', 'history'], 'top');
 
-  useEffect(() => { localStorage.setItem(STORAGE, JSON.stringify(entries)); }, [entries]);
-  useEffect(() => { request<Status>('status').then(setStatus).catch(e => setError(e.message)); }, []);
+  useEffect(() => { writeEntries(entries); }, [entries]);
+  useEffect(() => { request<Status>('status').then(setStatus).catch((e) => setError(e.message)); }, []);
 
-  function replace(entry: Entry) { setEntries(previous => { const next = [entry, ...previous.filter(item => item.id !== entry.id)]; localStorage.setItem(STORAGE, JSON.stringify(next)); return next; }); setSelectedId(entry.id); }
+  function replace(entry: Entry) {
+    setEntries((previous) => { const next = [entry, ...previous.filter((item) => item.id !== entry.id)]; writeEntries(next); return next; });
+    setSelectedId(entry.id);
+  }
 
   async function evaluate(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
@@ -67,10 +88,107 @@ export function LiveApp() {
     } catch (e) { setError(`${(e as Error).message} Write outcome may be uncertain. Create a new proposal only after checking the Walrus account.`); } finally { setBusy(false); }
   }
 
-  return <div className="live-shell"><header className="live-header"><div className="live-brand"><Fingerprint size={23}/> Spend<span>Memory</span></div><nav><a href="/?replay=1">Verified replay</a><a href="https://github.com/0xNexuz/spendmemory" target="_blank" rel="noreferrer">GitHub <ArrowRight size={15}/></a></nav></header>
-    <main className="live-main"><section className="live-hero"><div className="live-eyebrow">WALRUS × TATUM · LIVE MAINNET APP</div><h1>Review payments with memory.</h1><p>Check a Sui wallet through Tatum, recall decisions from Walrus, and make your own call. This app never sends payments.</p><div className="live-stats"><div><strong>{status?.memoryCount ?? '…'}</strong><span>visitor decision memories</span></div><div><strong>{status?.demoMemoryCount ?? '…'}</strong><span>demo memories (excluded from advice)</span></div><div><strong>{status?.maxMemories ?? '…'}</strong><span>public demo write cap</span></div></div></section>
-      {error && <div className="live-alert error" role="alert">{error}</div>}{notice && <div className="live-alert">{notice}</div>}
-      <section className="live-grid"><form onSubmit={evaluate} className="live-card"><div className="live-card-label"><Wallet size={18}/> 01 · CREATE A REVIEW</div><h2>Payment proposal</h2><p>Use a public Sui address. Merchant and category are labels, not an order or a payment.</p><label>Merchant<input required minLength={2} maxLength={80} value={merchant} onChange={e => setMerchant(e.target.value)} placeholder="Example: Cloud subscription"/></label><label>Category<input required minLength={2} maxLength={50} value={category} onChange={e => setCategory(e.target.value)}/></label><label>Amount (SUI)<input required inputMode="decimal" value={amountSui} onChange={e => setAmountSui(e.target.value)}/></label><label>Public Sui wallet address<input required value={walletAddress} onChange={e => setWalletAddress(e.target.value)} placeholder="0x…"/></label><button disabled={busy} className="live-button" type="submit">{busy ? 'Checking…' : 'Check with Tatum + Walrus'} <ArrowRight size={17}/></button></form>
-        <div className="live-card"><div className="live-card-label"><ShieldCheck size={18}/> 02 · REVIEW THE EVIDENCE</div>{selected ? <><h2>{selected.merchant}</h2><p>{selected.category} · {selected.amountSui} SUI</p><div className={`live-recommendation ${selected.evaluation.recommendation}`}>{selected.evaluation.recommendation.toUpperCase()}</div><div className="live-facts"><div><span>Tatum balance</span><strong>{selected.evaluation.chainVerified ? `${selected.evaluation.balanceSui} SUI` : 'Unverified'}</strong></div><div><span>Walrus recall</span><strong>{selected.evaluation.memoryVerified ? `${selected.evaluation.matchedMemories.length} matching` : 'Unverified'}</strong></div></div><ul>{selected.evaluation.reasons.map((item, i) => <li key={i}>{item}</li>)}</ul>{selected.evaluation.chainError && <small>Tatum: {selected.evaluation.chainError}</small>}{selected.evaluation.memoryError && <small>Walrus: {selected.evaluation.memoryError}</small>}{selected.state === 'open' && <div className="live-decision"><label>Decision<select value={decision} onChange={e => setDecision(e.target.value as 'approve' | 'decline')}><option value="decline">Decline</option><option value="approve">Approve</option></select></label><label>Reason<textarea required minLength={8} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} placeholder="Why did you make this decision?"/></label><button className="live-button" disabled={busy || !selected.evaluation.memoryVerified} onClick={saveDecision} type="button">Save decision to Walrus <ArrowRight size={17}/></button></div>}{selected.state === 'pending' && (selected.jobId ? <button className="live-button" disabled={busy} onClick={() => checkJob(selected)} type="button">Check write status <ArrowRight size={17}/></button> : <p>Write outcome uncertain. Check the Walrus account before making another proposal.</p>)}{selected.state === 'confirmed' && <div className="live-confirmed"><CheckCircle2 size={19}/> Confirmed blob <code>{selected.blobId}</code></div>}{selected.state === 'failed' && <p>Write failed. Make a new proposal before trying again.</p>}</> : <div className="live-empty">Create a proposal to see live Tatum data and Walrus memory.</div>}</div></section>
-      <section className="live-card live-history"><div className="live-card-label">03 · THIS BROWSER'S REVIEWS</div>{entries.length ? entries.map(entry => <button type="button" key={entry.id} onClick={() => setSelectedId(entry.id)}><span>{entry.merchant}<small>{entry.category} · {entry.amountSui} SUI</small></span><strong>{entry.state}</strong></button>) : <p>No reviews in this browser yet.</p>}</section><footer className="live-footer">This is a shared public demo. Visitor decisions are stored separately from demo examples. Decisions are user-reported, not verified purchases. Visitor memories are shared across this demo; browser proposal history stays on this device. Do not enter private financial information or wallet keys.</footer></main></div>;
+  const demoCount = status?.demoMemoryCount;
+
+  return <main className="sm-page lv-page">
+    <header className={`sm-header${scrolled ? ' is-stuck' : ''}`}>
+      <div className="sm-header-inner">
+        <a className="sm-brand" href="#top" aria-label="SpendMemory, back to top"><StippleMark/><span>SpendMemory</span></a>
+        <nav className="sm-nav" aria-label="Page">
+          <a href="#review" aria-current={section === 'review' ? 'location' : undefined}>Review</a>
+          <a href="#history" aria-current={section === 'history' ? 'location' : undefined}>History</a>
+          <a href="/?replay=1">Replay</a>
+          <a className="sm-nav-repo" href={repoUrl} target="_blank" rel="noreferrer" aria-label="Source on GitHub"><Github size={16}/><span>Source</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <section className="sm-hero lv-hero" id="top">
+      <h1>Review payments with memory</h1>
+      <div className="sm-hero-side">
+        <p>Check a Sui wallet through Tatum, recall past decisions from Walrus, and make your own call. Every decision you save becomes memory for the next review. This app never sends payments.</p>
+        <div className="sm-actions">
+          <a href="#review" className="sm-button primary">Start a review <ArrowRight size={17}/></a>
+          <a href="/?replay=1" className="sm-button ink">See the verified replay</a>
+        </div>
+      </div>
+    </section>
+
+    <figure className="sm-art"><MemoryArtwork/></figure>
+
+    <section className="sm-ledger" aria-label="Live memory count">
+      <dl>
+        <div><dt>Visitor decision memories</dt><dd><strong>{status?.memoryCount ?? '…'}</strong><span>Read live from the Walrus namespace.</span></dd></div>
+        <div><dt>Demo memories</dt><dd><strong>{demoCount ?? '…'}</strong><span>Excluded from visitor recommendations.</span></dd></div>
+        <div><dt>Public write cap</dt><dd><strong>{status?.maxMemories ?? '…'}</strong><span>Evaluation stays open after the cap.</span></dd></div>
+      </dl>
+    </section>
+
+    {(error || notice) && <div className="lv-alerts">
+      {error && <div className="lv-alert error" role="alert"><span>{error}</span><button type="button" aria-label="Dismiss error" onClick={() => setError('')}><X size={16}/></button></div>}
+      {notice && <div className="lv-alert" role="status"><CheckCircle2 size={18}/><span>{notice}</span><button type="button" aria-label="Dismiss message" onClick={() => setNotice('')}><X size={16}/></button></div>}
+    </div>}
+
+    <section className="sm-section" id="review">
+      <div className="sm-section-head"><div><h2>Review a payment</h2><p>Use a public Sui address. Merchant and category are labels for memory, not an order or a payment.</p></div></div>
+      <div className="lv-grid">
+        <form onSubmit={evaluate} className="sm-sheet lv-form">
+          <span className="sm-tape" aria-hidden="true"/>
+          <p className="sm-sheet-kind">Step 1</p>
+          <h3>Payment proposal</h3>
+          <div className="lv-fields">
+            <label>Merchant<input required minLength={2} maxLength={80} value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Example: Cloud subscription"/></label>
+            <label>Category<input required minLength={2} maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)}/></label>
+            <label>Amount in SUI<input required inputMode="decimal" value={amountSui} onChange={(e) => setAmountSui(e.target.value)}/></label>
+            <label className="wide">Public Sui wallet address<input required value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} placeholder="0x…" spellCheck={false}/></label>
+          </div>
+          <button disabled={busy} className="sm-button primary lv-full" type="submit">{busy ? <><RefreshCw className="lv-spin" size={17}/> Checking…</> : <>Check with Tatum and Walrus <ArrowRight size={17}/></>}</button>
+        </form>
+
+        <article className="sm-sheet lv-brief" aria-live="polite">
+          <span className="sm-tape" aria-hidden="true"/>
+          <p className="sm-sheet-kind">Step 2</p>
+          {selected ? <>
+            <h3>{selected.merchant}</h3>
+            <p className="sm-sheet-meta">{selected.category}, {selected.amountSui} SUI</p>
+            <span key={`${selected.id}-${selected.evaluation.recommendation}`} className={`sm-verdict lv-verdict ${selected.evaluation.recommendation}`}>{VERDICT[selected.evaluation.recommendation] ?? selected.evaluation.recommendation}</span>
+            <dl className="sm-rows">
+              <div><dt>Tatum balance</dt><dd>{selected.evaluation.chainVerified ? `${selected.evaluation.balanceSui} SUI` : 'Unverified'}</dd></div>
+              <div><dt>Walrus recall</dt><dd>{selected.evaluation.memoryVerified ? `${selected.evaluation.matchedMemories.length} matching` : 'Unverified'}</dd></div>
+            </dl>
+            <ul className="lv-reasons">{selected.evaluation.reasons.map((item, i) => <li key={i}><Check size={15}/>{item}</li>)}</ul>
+            {selected.evaluation.chainError && <p className="lv-inline-error">Tatum: {selected.evaluation.chainError}</p>}
+            {selected.evaluation.memoryError && <p className="lv-inline-error">Walrus: {selected.evaluation.memoryError}</p>}
+
+            {selected.state === 'open' && <div className="lv-decision">
+              <div className="sm-switch" role="group" aria-label="Decision">
+                <button type="button" aria-pressed={decision === 'decline'} onClick={() => setDecision('decline')}>Decline</button>
+                <button type="button" aria-pressed={decision === 'approve'} onClick={() => setDecision('approve')}>Approve</button>
+              </div>
+              <label>Why did you decide this?<textarea required minLength={8} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="A specific rule or observation the next review should remember."/></label>
+              <button className="sm-button primary" disabled={busy || !selected.evaluation.memoryVerified || reason.trim().length < 8} onClick={saveDecision} type="button">Save decision to Walrus <ArrowRight size={17}/></button>
+            </div>}
+            {selected.state === 'pending' && (selected.jobId
+              ? <button className="sm-button ink lv-top" disabled={busy} onClick={() => checkJob(selected)} type="button"><RefreshCw size={16}/> Check write status</button>
+              : <p className="lv-note">Write outcome uncertain. Check the Walrus account before making another proposal.</p>)}
+            {selected.state === 'confirmed' && <div className="lv-confirmed"><CheckCircle2 size={19}/><span>Confirmed blob <code title={selected.blobId}>{shortId(selected.blobId || '')}</code></span></div>}
+            {selected.state === 'failed' && <p className="lv-note">Write failed. Make a new proposal before trying again.</p>}
+          </> : <div className="lv-empty"><h3>Your brief appears here</h3><p>Fill in the proposal to see the live Tatum balance and any matching decisions recalled from Walrus.</p></div>}
+        </article>
+      </div>
+    </section>
+
+    <section className="sm-section" id="history">
+      <div className="sm-section-head"><div><h2>This browser's reviews</h2><p>Proposal history stays on this device. Confirmed decisions are shared through Walrus.</p></div></div>
+      {entries.length ? <div className="lv-history">
+        {entries.map((entry) => <button type="button" key={entry.id} className={selected?.id === entry.id ? 'current' : ''} onClick={() => { setSelectedId(entry.id); document.getElementById('review')?.scrollIntoView({ behavior: 'smooth' }); }}>
+          <span className="lv-h-main"><strong>{entry.merchant}</strong><small>{entry.category}, {entry.amountSui} SUI</small></span>
+          <span className={`lv-h-state ${entry.state}`}>{STATE[entry.state]}</span>
+          <ArrowRight size={16}/>
+        </button>)}
+      </div> : <p className="lv-history-empty">No reviews in this browser yet.</p>}
+    </section>
+
+    <footer className="sm-footer lv-footer"><span>This is a shared public demo. Visitor decisions are user-reported, not verified purchases. They are stored separately from demo examples and shared across visitors. Do not enter private financial information or wallet keys.</span><span>Built for Total Recall 2026</span></footer>
+  </main>;
 }

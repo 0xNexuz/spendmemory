@@ -32,6 +32,10 @@ The dev API binds to `127.0.0.1:8787` and Vite proxies `/api` to it. Do not expo
 Production builds render a public, interactive replay of the verified Mainnet decision instead of exposing the local write API. The replay is explicitly labeled and needs no server credentials. Its milestone count is a verified snapshot that must be updated after new confirmed product writes. The full live review flow remains available with `npm run dev` until authentication and durable hosted storage are implemented.
 The production replay is deployed at [spendmemory.vercel.app](https://spendmemory.vercel.app/). It was anonymously reachable and its JavaScript asset contained the confirmed blob ID without the Walrus private key variable in a 2026-10-28 check.
 
+## Frontend artwork
+
+The interface is drawn as an inventor's notebook. One hero artwork merges three ideas: sepia gears and ledger boxes for the review rules, a row of stippled heads turning from one review to the next, and the last head wired to pinned clippings of past decisions. Gears, ledger, wires and clippings are drawn in code (`src/art/`), so they scale cleanly and animate: wires draw in on load, gears turn slowly, and hovering a clipping lifts it and lights its wire. The stippled heads are generated images in `public/art/`. Motion is switched off for visitors who ask for reduced motion.
+
 ## Scripts
 
 ```powershell

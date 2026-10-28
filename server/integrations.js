@@ -5,7 +5,7 @@ const GRAPHQL_URL = 'https://sui-mainnet.gateway.tatum.io/graphql';
 export function hasTatum() { return Boolean(process.env.TATUM_API_KEY); }
 export function hasMemory() { return Boolean(process.env.MEMWAL_PRIVATE_KEY && process.env.MEMWAL_ACCOUNT_ID); }
 
-function memoryClient() {
+function memoryClient(namespace) {
   if (!hasMemory()) throw new Error('Walrus Memory credentials are not configured.');
   const url = process.env.MEMWAL_SERVER_URL || 'https://relayer.memory.walrus.xyz';
   if (url !== 'https://relayer.memory.walrus.xyz') throw new Error('This build only permits the Walrus Memory Mainnet relayer.');
@@ -13,7 +13,7 @@ function memoryClient() {
     key: process.env.MEMWAL_PRIVATE_KEY,
     accountId: process.env.MEMWAL_ACCOUNT_ID,
     serverUrl: url,
-    namespace: process.env.MEMWAL_NAMESPACE || 'spendmemory-mainnet',
+    namespace: namespace || process.env.MEMWAL_NAMESPACE || 'spendmemory-mainnet',
     preflightTimeoutMs: 20000,
   });
 }
@@ -56,14 +56,14 @@ export async function getTransaction(digest) {
   };
 }
 
-export async function recall(proposal) {
-  const client = memoryClient();
+export async function recall(proposal, namespace) {
+  const client = memoryClient(namespace);
   const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}`, limit: 30 });
   return response.results || [];
 }
 
-export async function beginRemember(decision) {
-  const client = memoryClient();
+export async function beginRemember(decision, namespace) {
+  const client = memoryClient(namespace);
   const response = await client.remember(JSON.stringify(decision));
   if (!response.job_id) throw new Error('Walrus Memory did not return a write job ID.');
   return response;
@@ -80,9 +80,8 @@ export async function memoryJobStatus(jobId) {
   return memoryClient().getRememberStatus(jobId);
 }
 
-export async function listProductMemories() {
-  const client = memoryClient();
-  const namespace = process.env.MEMWAL_NAMESPACE || 'spendmemory-mainnet';
+export async function listProductMemories(namespace = process.env.MEMWAL_NAMESPACE || 'spendmemory-mainnet') {
+  const client = memoryClient(namespace);
   const memories = [];
   let cursor;
   do {

@@ -52,3 +52,7 @@ npm run dev    # local API and frontend
 - Confirm the event's special prize discrepancy with the organizers: the event page lists agent payments while the rules list a mystery bounty.
 
 Submission has not been completed.
+
+## Visitor and demo memory separation
+
+The hosted app uses `spendmemory-user-decisions-v1` for visitor recall and writes. Existing examples remain in `spendmemory-mainnet` and do not affect hosted recommendations. The app displays separate visitor and demo counts. Visitor decisions are user-reported; the app does not verify purchases.

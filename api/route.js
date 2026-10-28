@@ -6,6 +6,7 @@ const ADDRESS = /^0x[a-fA-F0-9]{64}$/;
 const DIGEST = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const JOB = /^[0-9a-f-]{36}$/i;
 const MAX_MEMORIES = 100;
+const LIVE_NAMESPACE = 'spendmemory-user-decisions-v1';
 const maxReviewMist = parseSuiToMist(process.env.MAX_REVIEW_SUI || '25');
 const send = (res, code, value) => res.status(code).json(value);
 const scrub = (error) => error instanceof Error ? error.message : 'Unknown error';
@@ -38,8 +39,9 @@ export default async function handler(req, res) {
   const action = String(req.query.action || '');
   try {
     if (action === 'status' && req.method === 'GET') {
-      const count = (await listProductMemories()).length;
-      return send(res, 200, { network: 'Sui Mainnet', memoryCount: count, maxMemories: MAX_MEMORIES, maxReviewSui: mistToSui(maxReviewMist) });
+      const [live, demo] = await Promise.all([listProductMemories(LIVE_NAMESPACE), listProductMemories()]);
+      const count = live.length;
+      return send(res, 200, { network: 'Sui Mainnet', memoryCount: count, demoMemoryCount: demo.length, totalMemoryCount: count + demo.length, maxMemories: MAX_MEMORIES, maxReviewSui: mistToSui(maxReviewMist) });
     }
     if (action === 'evaluate' && req.method === 'POST') {
       const merchant = String(req.body?.merchant || '').trim();
@@ -48,7 +50,7 @@ export default async function handler(req, res) {
       const amountMist = parseSuiToMist(req.body?.amountSui);
       if (merchant.length < 2 || merchant.length > 80 || category.length < 2 || category.length > 50 || !ADDRESS.test(walletAddress)) return send(res, 400, { error: 'Enter a merchant, category, and valid Sui address.' });
       const proposal = { id: randomUUID(), merchant, category, walletAddress, amountMist: String(amountMist), amountSui: mistToSui(amountMist), createdAt: new Date().toISOString() };
-      const [balanceResult, memoryResult] = await Promise.allSettled([getBalance(walletAddress), recall(proposal)]);
+      const [balanceResult, memoryResult] = await Promise.allSettled([getBalance(walletAddress), recall(proposal, LIVE_NAMESPACE)]);
       const balanceMist = balanceResult.status === 'fulfilled' ? balanceResult.value : null;
       const matches = memoryResult.status === 'fulfilled' ? relevantMemories(memoryResult.value, proposal) : [];
       const evaluation = { ...evaluatePolicy({ proposal, balanceMist, memories: matches, maxReviewMist }), balanceSui: balanceMist == null ? null : mistToSui(balanceMist), chainVerified: balanceMist != null, memoryVerified: memoryResult.status === 'fulfilled', chainError: balanceResult.status === 'rejected' ? scrub(balanceResult.reason) : null, memoryError: memoryResult.status === 'rejected' ? scrub(memoryResult.reason) : null, matchedMemories: matches.map(({ blobId, decision, reason, createdAt }) => ({ blobId, decision, reason, createdAt })) };
@@ -60,9 +62,9 @@ export default async function handler(req, res) {
       const decision = String(req.body?.decision || '');
       const reason = String(req.body?.reason || '').trim();
       if (!['approve', 'decline'].includes(decision) || reason.length < 8 || reason.length > 500) return send(res, 400, { error: 'Choose approve or decline and give a reason of 8–500 characters.' });
-      if ((await listProductMemories()).length >= MAX_MEMORIES) return send(res, 429, { error: 'Public demo memory cap reached. Evaluation remains available.' });
-      const memory = { app: 'spendmemory', v: 1, source: 'public-web', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id };
-      const accepted = await beginRemember(memory);
+      if ((await listProductMemories(LIVE_NAMESPACE)).length >= MAX_MEMORIES) return send(res, 429, { error: 'Public demo memory cap reached. Evaluation remains available.' });
+      const memory = { app: 'spendmemory', v: 1, source: 'public-web', scenarioType: 'user-reported', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id };
+      const accepted = await beginRemember(memory, LIVE_NAMESPACE);
       return send(res, 202, { jobId: accepted.job_id });
     }
     if (action === 'memory-status' && req.method === 'GET') {

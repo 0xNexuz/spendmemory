@@ -13,7 +13,7 @@ A Sui payment review demo for the [Walrus × Tatum Total Recall hackathon](https
 4. Restart the app and review a similar proposal. The app recalls the confirmed decision and visibly changes its recommendation.
 5. The proof panel shows the confirmed blob ID. A separate lookup verifies an actual Sui transaction digest through Tatum when one is available.
 
-The `spendmemory-mainnet` namespace has **50 confirmed Mainnet memories**: one original fictional demo decision and 49 additional clearly labeled fictional demo decisions. Each of the 49 seed jobs returned a blob ID and the 49 blobs were independently listed through the Walrus Memory SDK. The separate integration-check namespace is excluded. These are real Mainnet writes containing synthetic scenarios, not 50 independent users. The hosted counter reads the namespace live.
+The `spendmemory-mainnet` namespace had **51 confirmed Mainnet memories** at the 2026-10-28 hosted check: one original fictional demo decision, 49 additional labeled fictional demo seeds, and one fictional hosted flow check. Each of the 49 seed jobs returned a blob ID and the 49 blobs were independently listed through the Walrus Memory SDK. The hosted flow check returned blob `M0Xo9ZQKokoCeIxxzh3ZOHC6QlJXGgpuXBCJhL4nKsI`. The separate integration-check namespace is excluded. These are real Mainnet writes containing synthetic scenarios, not independent users or hackathon submission evidence. The hosted counter reads the namespace live.
 
 ## Run locally
 
@@ -46,8 +46,8 @@ npm run dev    # local API and frontend
 
 ## Submission work remaining
 
-- A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. The original fictional product decision changed a matching proposal from `review` to `decline` after restart. The product namespace now has 50 confirmed Mainnet memories, including 49 labeled fictional seed decisions.
-- Verify the hosted evaluation and write flow after deployment; preserve confirmed blob IDs.
+- A separate test namespace passed a confirmed Mainnet write and recall on 2026-10-28; it is not counted as a product decision. Tatum Mainnet balance and transaction reads were also verified. The original fictional product decision changed a matching proposal from `review` to `decline` after restart. The product namespace had 51 confirmed Mainnet memories at the hosted check, including 49 labeled fictional seed decisions and one fictional hosted write check.
+- Preserve confirmed blob IDs and gather eligible hackathon submission evidence beyond the fictional demo writes.
 - Publish a blog post and record a 2–3 minute demo video.
 - Confirm the event's special prize discrepancy with the organizers: the event page lists agent payments while the rules list a mystery bounty.
 

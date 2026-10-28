@@ -5,14 +5,14 @@
 - **Project:** SpendMemory, a human-controlled Sui payment review assistant whose recommendations learn from Walrus Memory.
 - **Repository:** Local Git repository in this folder; `origin` is the public [GitHub repository](https://github.com/0xNexuz/spendmemory).
 - **Stage:** SUBMISSION_PREPARATION.
-- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; 50 confirmed product-namespace memories (all fictional demo scenarios, 49 seeded in batches) independently listed. Public GitHub repo and Vercel evidence replay deployed; live hosted flow pending deployment verification.
+- **Status:** Live Tatum and Walrus Mainnet integrations VERIFIED; 51 confirmed product-namespace memories (all fictional demo scenarios, 49 seeded in batches). Public GitHub repo and Vercel live app deployed; hosted evaluate, write, job confirmation, and count verified anonymously.
 - **Updated:** 2026-10-28.
 
 ## Git State
 
 - **Branch/HEAD:** `master` tracks `origin/master`; verify current HEAD with `git log -1` and remote with `gh api` after each push.
 - **Working tree:** Check `git status` for current changes. `node_modules`, `.env`, `.local`, and `dist` are ignored.
-- **Last verified milestone:** Product namespace reached 50 confirmed Mainnet memories on 2026-10-28; 49 seed jobs each returned a blob ID and all 49 were independently listed through the SDK. The original memory changed the recommendation after restart.
+- **Last verified milestone:** Vercel hosted review flow confirmed a fictional decision blob `M0Xo9ZQKokoCeIxxzh3ZOHC6QlJXGgpuXBCJhL4nKsI` and live namespace count 51 on 2026-10-28. The previous 49 seed blobs were independently listed through the SDK.
 
 ## Hackathon Context
 
@@ -44,9 +44,9 @@
 - **Verified:** Tatum key is configured in ignored `.env`; Mainnet GraphQL balance and transaction reads succeeded on 2026-10-28. Live method discovery listed GraphQL only; JSON-RPC POST returned 404, so the app was migrated to GraphQL.
 - **Verified:** Walrus Mainnet credentials are configured in ignored `.env`. Health and recall succeeded. A single integration-check memory was confirmed and recalled in the separate `spendmemory-integration-check` namespace, blob ID `5lVVwlcm0n7S5vzohoc_GYZcREzQO0FV7mZ9IZdKPy4`. This is test data, not a product decision memory or submission-count evidence.
 - **Verified:** User-provided wallet address initially returned 0 SUI through Tatum, so a public funded Mainnet address was used for both fictional demo proposals. A later recheck of the user's address returned 5.27027 SUI (5,270,270,000 MIST), independently matched by Tatum and Sui's public Mainnet GraphQL endpoint. A `DemoCloud subscription` / `software` / 0.02 SUI proposal initially returned `review`; a delegated `decline` decision produced confirmed Mainnet blob ID `VpDjzjIwtRW1UQJ8LOrUjUp2rbfV-RaIU36yB8DNSdg` (job `bfbf13d9-babe-4877-8cee-15a12d221523`). After a real server restart, the same proposal returned `decline`, with one matching recalled memory and the same blob ID. No payment was sent.
-- **Count:** 50 confirmed product-namespace memories on Mainnet: one original fictional demo decision and 49 additional fictional demo seeds. Zero remain to the user's technical 50-write goal. Per repository policy, seeded data is not counted as hackathon submission evidence; obtain eligible decisions separately. The integration check is excluded.
-- **P0:** Deploy and verify the hosted write flow on Vercel. Then prepare blog, video, and submission evidence.
-- **Deployment:** Existing production site at [spendmemory.vercel.app](https://spendmemory.vercel.app/) still serves the replay until this change is pushed and deployed. New production build defaults to the live app with a Vercel serverless API; replay moves to `/?replay=1`. Vercel project `xreyys-projects/spendmemory` is connected to GitHub.
+- **Count:** 51 confirmed product-namespace memories on Mainnet: one original fictional demo decision, 49 fictional demo seeds, and one fictional hosted flow check. Zero remain to the user's technical 50-write goal. Per repository policy, seeded data is not counted as hackathon submission evidence; obtain eligible decisions separately. The integration check is excluded.
+- **P0:** Prepare blog, video, and eligible submission evidence.
+- **Deployment:** Production at [spendmemory.vercel.app](https://spendmemory.vercel.app/) serves the live app with a Vercel serverless API; replay is at `/?replay=1`. Vercel project `xreyys-projects/spendmemory` is connected to GitHub. Anonymous production status, evaluation, job lookup, and a new hosted write were verified.
 
 ## Verification
 
@@ -66,6 +66,7 @@
 | 2026-10-28 | GitHub and Vercel | VERIFIED: public `0xNexuz/spendmemory` branch matched local commit `e9933c3` at first push; Vercel production deployment `dpl_9QdYRGFo1EYZ22ohNFoCueD62VaR` was READY at `https://spendmemory.vercel.app/`, anonymous HTTP 200; hosted JS contained the replay merchant and confirmed blob ID, with no `MEMWAL_PRIVATE_KEY` string. GitHub was connected to the Vercel project. |
 | 2026-10-28 | 50 Mainnet product memories | VERIFIED: seeded 49 explicitly fictional demo decisions in batches of 10/10/10/10/9. Each job confirmed with a blob ID. SDK namespace listing returned 50 memories and included all 49 seed blobs; original confirmed demo memory makes 50. Integration-check namespace excluded. |
 | 2026-10-28 | Hosted API local smoke | VERIFIED: serverless handler returned status 200 and evaluated a fictional proposal with Tatum and Walrus both verified and a signed proposal ticket. Hosted deployment remains to be checked. |
+| 2026-10-28 | Vercel live flow | VERIFIED: Git-linked production deployment was Ready; anonymous status API returned 50 before hosted write, evaluation verified both Tatum and Walrus with 5 matching memories, hosted write job `03f1b650-ce50-44e4-bb8b-eef764dd1dc8` returned confirmed blob `M0Xo9ZQKokoCeIxxzh3ZOHC6QlJXGgpuXBCJhL4nKsI`, and status then returned 51. Homepage returned HTTP 200 with live UI bundle and no private-key variable string. |
 
 ## Decision Log
 
@@ -84,8 +85,8 @@
 ### 2026-10-28 — Open hosted writes and 50 Mainnet memories
 
 - **Decision:** User selected open writes for all visitors and requested 50 confirmed memories. Implement hosted browser-local proposals with serverless Tatum/Walrus access and seed fictional scenarios to the shared Mainnet namespace. Label synthetic content plainly.
-- **Status:** 50-memory target VERIFIED; hosted deployment pending verification.
+- **Status:** 50-memory target VERIFIED and exceeded by one hosted flow check; hosted deployment VERIFIED.
 
 ## Next Action
 
-- Push the live app and deploy to Vercel under the user's existing authorization. Verify anonymous hosted status and evaluation, inspect live writes safely, then prepare video and blog. Submission remains a separate authorization boundary.
+- Prepare video, blog, and eligible submission evidence. Fictional seed records document real Mainnet integration but are excluded as hackathon evidence by repository policy. Submission remains a separate authorization boundary.

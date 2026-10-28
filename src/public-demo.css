@@ -201,6 +201,7 @@
   .sm-nav{gap:0}
   .sm-nav a{padding:0 7px;font-size:13.5px}
   .sm-nav a::after{left:7px;right:7px}
+  .sm-nav a[href="#receipt"]{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   .sm-page *,.sm-page *::before,.sm-page *::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important}

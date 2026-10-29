@@ -108,6 +108,21 @@ export function idempotencyKey(proposalId) {
 export function createHandler(deps) {
   const now = deps.now || (() => Date.now());
   const maxReviewMist = parseSuiToMist(deps.maxReviewSui || '25');
+  // Logs carry no reasons, merchants or signatures: only enough to tell why a wallet's signature failed.
+  const log = deps.log || ((line) => console.warn(line));
+  const SCHEMES = { 0: 'ed25519', 1: 'secp256k1', 2: 'secp256r1', 3: 'multisig', 5: 'zklogin', 6: 'passkey' };
+  async function checkSignature(message, signature, wallet, signedBytes, purpose) {
+    const expected = new TextEncoder().encode(message);
+    try { await deps.verifySignature(expected, signature, wallet); }
+    catch (error) {
+      let scheme = 'unknown';
+      try { scheme = SCHEMES[Buffer.from(signature, 'base64')[0]] ?? 'unknown'; } catch { /* not base64 */ }
+      const sameBytes = typeof signedBytes === 'string' ? signedBytes === Buffer.from(expected).toString('base64') : 'not sent';
+      log(`[${purpose}] signature rejected: scheme=${scheme} walletSignedSameBytes=${sameBytes} reason=${String(error?.message || error).slice(0, 160)}`);
+      const hint = sameBytes === false ? ' Your wallet signed a different message than the one shown; try another wallet.' : '';
+      throw new ClientError(401, `That signature is not from the wallet being reviewed. Connect that wallet and sign again.${hint}`);
+    }
+  }
   // Per connection, per instance: serverless instances do not share memory. The Walrus-backed global limit below is shared.
   const recentWrites = new Map();
   function allowWrite(ip) {
@@ -192,8 +207,7 @@ export function createHandler(deps) {
         const signature = req.body?.signature;
         if (typeof signature !== 'string' || signature.length < 16 || signature.length > 5000) throw new ClientError(401, 'Connect the wallet you are reviewing and sign to save this decision.');
         const message = await saveMessage({ walletAddress: payload.wallet, proposalId: payload.id, decision, reason, expiresAt: payload.expiresAt });
-        try { await deps.verifySignature(new TextEncoder().encode(message), signature, payload.wallet); }
-        catch { throw new ClientError(401, 'That signature is not from the wallet being reviewed. Connect that wallet and sign again.'); }
+        await checkSignature(message, signature, payload.wallet, req.body?.signedBytes, 'remember');
         const ip = String(req.headers['x-real-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0] || 'unknown').trim();
         if (!allowWrite(ip)) throw new ClientError(429, 'Too many saved decisions from this connection. Try again in a few minutes.');
         const [existing, saved] = await Promise.all([deps.listProductMemories(LIVE_NAMESPACE), deps.recallByProposal(payload, LIVE_NAMESPACE)]);
@@ -213,8 +227,7 @@ export function createHandler(deps) {
         const signature = req.body?.signature;
         if (typeof signature !== 'string' || signature.length < 16 || signature.length > 5000) throw new ClientError(401, 'Connect the wallet you are reviewing and sign to see its reasons.');
         const message = viewMessage({ walletAddress: payload.wallet, proposalId: payload.id, expiresAt: payload.expiresAt });
-        try { await deps.verifySignature(new TextEncoder().encode(message), signature, payload.wallet); }
-        catch { throw new ClientError(401, 'That signature is not from the wallet being reviewed. Connect that wallet and sign again.'); }
+        await checkSignature(message, signature, payload.wallet, req.body?.signedBytes, 'reasons');
         const proposal = { merchant: payload.merchant, category: payload.category, walletKey: payload.walletKey };
         const matches = forWallet(relevantMemories(await deps.recall(proposal, LIVE_NAMESPACE), proposal), payload.walletKey);
         return send(res, 200, { reasons: matches.map(({ blobId, decision, reason, createdAt }) => ({ blobId, decision, reason, createdAt })) });
@@ -243,7 +256,11 @@ export function createHandler(deps) {
 
       return send(res, 404, { error: 'Unknown API action.' });
     } catch (error) {
-      if (error instanceof ClientError) return send(res, error.status, { error: error.message });
+      if (error instanceof ClientError) {
+        if (action === 'remember' || action === 'reasons') log(`[${action}] ${error.status}: ${error.message}`);
+        return send(res, error.status, { error: error.message });
+      }
+      if (action === 'remember' || action === 'reasons') log(`[${action}] 502: ${scrub(error)}`);
       return send(res, 502, { error: scrub(error) });
     }
   };

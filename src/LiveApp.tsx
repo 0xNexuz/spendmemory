@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { saveMessage, viewMessage } from '../server/save-message.js';
 import { ArrowRight, Check, CheckCircle2, Github, RefreshCw, X } from 'lucide-react';
 import { MemoryArtwork } from './art/MemoryArtwork';
@@ -30,11 +30,22 @@ const VERDICT: Record<string, string> = { review: 'Review manually', consider: '
 const STATE: Record<Entry['state'], string> = { open: 'Open', pending: 'Saving', confirmed: 'Memory saved', failed: 'Write failed' };
 const shortId = (v: string) => (v.length > 22 ? `${v.slice(0, 10)}…${v.slice(-8)}` : v);
 
+const REQUEST_TIMEOUT_MS = 45_000;
+const POLL_EVERY_MS = 4_000;
+const POLL_FOR_MS = 180_000;
+
 async function request<T>(action: string, body?: unknown, extra = ''): Promise<T> {
-  const response = await fetch(`/api/route?action=${action}${extra}`, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
-  const data = await response.json();
-  if (!response.ok) throw new ApiError(data.error || `Request failed (${response.status})`, response.status);
-  return data;
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`/api/route?action=${action}${extra}`, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new ApiError(data.error || `Request failed (${response.status})`, response.status);
+    return data;
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw new Error('The server did not answer in time.');
+    throw e;
+  } finally { window.clearTimeout(timer); }
 }
 
 function readEntries(): Entry[] {
@@ -59,6 +70,7 @@ export function LiveApp() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [revealed, setRevealed] = useState<Record<string, string>>({});
+  const [jobNote, setJobNote] = useState('');
   const selected = entries.find((e) => e.id === selectedId) || entries[0];
   const scrolled = useScrolled(12);
   const section = useActiveSection(['top', 'review', 'history'], 'top');
@@ -80,16 +92,40 @@ export function LiveApp() {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
-  async function checkJob(entry: Entry) {
-    if (!entry.jobId) return;
-    setBusy(true); setError('');
+  /** Returns true once the write has a final outcome. */
+  async function checkJob(entry: Entry, quiet = false): Promise<boolean> {
+    if (!entry.jobId) return true;
+    if (!quiet) { setBusy(true); setError(''); }
     try {
       const job = await request<{ status: string; blobId: string | null; error: string | null }>('memory-status', undefined, `&jobId=${encodeURIComponent(entry.jobId)}`);
-      if (job.status === 'done' && job.blobId) { replace({ ...entry, state: 'confirmed', blobId: job.blobId }); setNotice(`Confirmed on Walrus Mainnet: ${job.blobId}`); request<Status>('status').then(setStatus).catch(() => {}); }
-      else if (job.status === 'failed') { replace({ ...entry, state: 'failed' }); setError(job.error || 'Walrus write failed.'); }
-      else setNotice(`Walrus write is ${job.status}. Check again shortly.`);
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+      if (job.status === 'done' && job.blobId) { replace({ ...entry, state: 'confirmed', blobId: job.blobId }); setNotice(''); request<Status>('status').then(setStatus).catch(() => {}); return true; }
+      if (job.status === 'failed') { replace({ ...entry, state: 'failed' }); setJobNote(job.error || 'Walrus write failed.'); return true; }
+      setJobNote(`Walrus says the write is ${job.status}.`);
+      return false;
+    } catch (e) { if (!quiet) setJobNote((e as Error).message); return false; } finally { if (!quiet) setBusy(false); }
   }
+
+  // After the wallet signs, keep checking Walrus until the write has a blob ID, so nobody has to keep clicking.
+  const polling = useRef('');
+  const pendingJob = selected?.state === 'pending' ? selected.jobId : undefined;
+  useEffect(() => {
+    if (!pendingJob || !selected || polling.current === pendingJob) return;
+    polling.current = pendingJob;
+    const entry = selected;
+    const started = Date.now();
+    let stopped = false;
+    let timer: number | undefined;
+    const tick = async () => {
+      if (stopped) return;
+      const finished = await checkJob(entry, true);
+      if (finished || stopped) { polling.current = ''; return; }
+      if (Date.now() - started > POLL_FOR_MS) { polling.current = ''; setJobNote('Walrus is taking longer than usual. Use Check write status in a minute.'); return; }
+      timer = window.setTimeout(tick, POLL_EVERY_MS);
+    };
+    timer = window.setTimeout(tick, 1_500);
+    return () => { stopped = true; window.clearTimeout(timer); polling.current = ''; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingJob]);
 
   function messageToSign() {
     if (!selected) return Promise.reject(new Error('Choose a review first.'));
@@ -105,25 +141,25 @@ export function LiveApp() {
     return viewMessage({ walletAddress: t.wallet, proposalId: t.id, expiresAt: t.expiresAt });
   }
 
-  async function showReasons(signature: string) {
+  async function showReasons(signature: string, signedBytes: string) {
     if (!selected) return;
-    const result = await request<{ reasons: { blobId: string; reason: string }[] }>('reasons', { ticket: selected.ticket, signature });
+    const result = await request<{ reasons: { blobId: string; reason: string }[] }>('reasons', { ticket: selected.ticket, signature, signedBytes });
     setRevealed((prev) => ({ ...prev, ...Object.fromEntries(result.reasons.map((r) => [r.blobId, r.reason])) }));
   }
 
-  async function saveDecision(signature: string) {
+  /** Errors the server refused are thrown back to the wallet panel, so they show right under the button. */
+  async function saveDecision(signature: string, signedBytes: string) {
     if (!selected || selected.state !== 'open') return;
-    setBusy(true); setError(''); setNotice('');
-    const open = selected;
+    setBusy(true); setError(''); setNotice(''); setJobNote('');
     const pending: Entry = { ...selected, state: 'pending', decision, reason };
-    replace(pending);
     try {
-      const result = await request<{ jobId: string }>('remember', { ticket: selected.ticket, decision, reason, signature });
+      const result = await request<{ jobId: string }>('remember', { ticket: selected.ticket, decision, reason, signature, signedBytes });
       replace({ ...pending, jobId: result.jobId });
-      setNotice('Signed and accepted by Walrus. Check status until it returns a confirmed blob ID.');
     } catch (e) {
-      if (e instanceof ApiError && e.status < 500) { replace(open); setError(e.message); }
-      else setError(`${(e as Error).message} Write outcome may be uncertain. Create a new proposal only after checking the Walrus account.`);
+      if (e instanceof ApiError && e.status < 500) throw e;
+      // The server may or may not have reached Walrus: never offer a second save of the same proposal.
+      replace(pending);
+      setJobNote((e as Error).message);
     } finally { setBusy(false); }
   }
 
@@ -225,10 +261,14 @@ export function LiveApp() {
               </Suspense>
             </div>}
             {selected.state === 'pending' && (selected.jobId
-              ? <button className="sm-button ink lv-top" disabled={busy} onClick={() => checkJob(selected)} type="button"><RefreshCw size={16}/> Check write status</button>
-              : <p className="lv-note">Write outcome uncertain. Check the Walrus account before making another proposal.</p>)}
+              ? <div className="lv-saving" role="status">
+                  <p><RefreshCw className="lv-spin" size={16}/> Signed and accepted. Walrus is storing your decision; this usually takes under a minute.</p>
+                  {jobNote && <p className="lv-saving-note">{jobNote}</p>}
+                  <button className="sm-button ink small" disabled={busy} onClick={() => checkJob(selected)} type="button"><RefreshCw size={15}/> Check write status</button>
+                </div>
+              : <p className="lv-note">Write outcome uncertain{jobNote ? ` (${jobNote})` : ''}. Check the ledger before making another proposal for this payment.</p>)}
             {selected.state === 'confirmed' && <div className="lv-confirmed"><CheckCircle2 size={19}/><span>Confirmed blob <code title={selected.blobId}>{shortId(selected.blobId || '')}</code>{selected.evaluation.payment?.matches ? ', saved with the verified payment' : ''}</span></div>}
-            {selected.state === 'failed' && <p className="lv-note">Write failed. Make a new proposal before trying again.</p>}
+            {selected.state === 'failed' && <p className="lv-note">Write failed{jobNote ? `: ${jobNote}` : ''}. Make a new proposal before trying again.</p>}
           </> : <div className="lv-empty"><h3>Your brief appears here</h3><p>Fill in the proposal to see the live Tatum balance and any past decisions Walrus recalls for this wallet.</p></div>}
         </article>
       </div>

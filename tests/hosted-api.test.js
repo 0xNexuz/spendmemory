@@ -363,3 +363,19 @@ test('reasons stay private: the brief omits them and only the signed-in owner ca
   assert.equal(ok.statusCode, 200);
   assert.deepEqual(ok.body.reasons.map((r) => r.reason), ['My private note about this charge']);
 });
+
+test('a rejected signature is logged with a cause but no reason, merchant or signature', async () => {
+  const lines = [];
+  const { deps } = fakes({ log: (line) => lines.push(line) });
+  const handler = createHandler(deps);
+  const evaluated = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody });
+  const ticket = evaluated.body.ticket;
+  const reason = 'Unrequested renewal, check the invoice.';
+  const signature = await signedBy(ticket, 'decline', reason, OTHER);
+  const res = await call(handler, { method: 'POST', action: 'remember', body: { ticket, decision: 'decline', reason, signature, signedBytes: Buffer.from('something else').toString('base64') } });
+  assert.equal(res.statusCode, 401);
+  assert.match(res.body.error, /signed a different message/);
+  assert.ok(lines.some((l) => /signature rejected: scheme=\S+ walletSignedSameBytes=false/.test(l)));
+  const all = lines.join('\n');
+  for (const secret of [reason, 'DemoCloud', signature]) assert.equal(all.includes(secret), false, secret);
+});

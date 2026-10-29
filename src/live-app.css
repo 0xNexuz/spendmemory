@@ -93,3 +93,11 @@
 .lv-past-reason{overflow-wrap:anywhere}
 .lv-past-reason em{color:var(--ink-2)}
 @media (max-width:700px){.lv-past li{grid-template-columns:auto 1fr}.lv-past-reason{grid-column:1/-1}}
+
+/* Wallet: disconnect, and the save in progress */
+.ws-link{border:0;background:transparent;padding:6px 4px;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;cursor:pointer;transition:color .2s}
+.ws-link:hover{color:#8d2e22}
+.ws-link:disabled{opacity:.5;cursor:default}
+.lv-saving{display:grid;gap:10px;justify-items:start;margin-top:20px;padding:14px 16px;border-radius:2px;background:#f3e2bd;color:#5c3b08;font-size:14.5px;animation:lv-drop .45s var(--ease)}
+.lv-saving p{margin:0;display:flex;align-items:center;gap:9px}
+.lv-saving-note{font-size:13.5px;opacity:.85}

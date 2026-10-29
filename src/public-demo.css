@@ -157,6 +157,34 @@
 .sm-link-ink:hover svg{transform:translateX(4px)}
 .sm-footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:30px 0 40px;color:var(--ink-2);font-size:14px}
 
+/* Proof ledger: every genuine decision since the replay */
+.pl-tally{margin:0;font-size:15px;color:var(--ink-2);white-space:nowrap}
+.pl-tally strong{font-stretch:62%;font-weight:800;font-size:30px;color:var(--ink);margin-right:2px}
+.pl-empty{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:22px;border:1.5px dashed var(--rule);color:var(--ink-2)}
+.pl-empty a{font-weight:700;color:var(--ink);background:linear-gradient(currentColor,currentColor) 0 100%/100% 1.5px no-repeat}
+.pl-empty a:hover{color:var(--cobalt)}
+.pl-empty.error{color:#8d2e22}
+.pl-spin{animation:lv-spin-pl 1s linear infinite}
+@keyframes lv-spin-pl{to{transform:rotate(360deg)}}
+.pl-ledger{list-style:none;margin:0;padding:0;border:1.5px solid var(--ink);background:rgba(250,247,239,.5)}
+.pl-ledger li{display:grid;grid-template-columns:120px 112px minmax(0,1fr) auto minmax(150px,auto);align-items:center;gap:16px;min-height:56px;padding:8px 18px;border-bottom:1px solid #e3d8c2;animation:pl-in .5s var(--ease) both;animation-delay:calc(var(--i) * 45ms);transition:background-color .25s var(--ease)}
+.pl-ledger li:last-child{border-bottom:0}
+.pl-ledger li:hover{background:var(--sheet)}
+@keyframes pl-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pl-date{font-size:14px;color:var(--ink-2)}
+.pl-stamp{justify-self:start;padding:3px 9px;border:2px solid currentColor;border-radius:2px;font-stretch:62%;font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.5px;transform:rotate(-2deg);mix-blend-mode:multiply}
+.pl-stamp.decline{color:var(--red)}
+.pl-stamp.approve{color:#2f7a52}
+.pl-cat{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
+.pl-blob{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;padding:6px 8px;border-radius:2px;cursor:pointer;color:var(--ink-2);transition:background-color .2s,color .2s}
+.pl-blob code{font:600 13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);white-space:nowrap}
+.pl-blob:hover{background:rgba(43,32,23,.08);color:var(--cobalt)}
+.pl-badges{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.pl-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:2px;font-size:12.5px;font-weight:700;background:var(--paper-2);color:var(--ink-2);white-space:nowrap}
+.pl-badge.signed{background:#dfe8f8;color:var(--cobalt-deep)}
+.pl-badge.paid{background:#dfeedd;color:#24563a;transition:transform .25s var(--ease),box-shadow .25s}
+.pl-badge.paid:hover{transform:translateY(-1px);box-shadow:0 2px 0 #24563a}
+
 /* Colophon: the notebook's last page */
 .sm-colophon{margin-top:120px;border-top:1.5px solid var(--ink);background:linear-gradient(rgba(226,213,184,.55),rgba(226,213,184,.25))}
 .sm-colophon-inner{width:min(1220px,100% - 48px);margin:0 auto;padding:52px 0 36px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(240px,.8fr) auto;gap:40px 56px;align-items:start}
@@ -209,6 +237,13 @@
   .sm-figure{grid-column:1/-1;grid-row:1;max-width:320px;justify-self:center}
 }
 @media (max-width:700px){
+  .pl-ledger li{grid-template-columns:auto minmax(0,1fr);grid-template-areas:'stamp date' 'cat cat' 'blob badges';gap:8px 10px;padding:14px}
+  .pl-date{grid-area:date;font-size:13px;justify-self:end}
+  .pl-stamp{grid-area:stamp}
+  .pl-cat{grid-area:cat}
+  .pl-blob{grid-area:blob;justify-self:start;padding-left:0}
+  .pl-badges{grid-area:badges}
+  .pl-tally{margin-top:14px}
   .sm-page{font-size:16px}
   .sm-header-inner,.sm-hero,.sm-ledger,.sm-section,.sm-callout,.sm-footer{width:calc(100% - 32px)}
   .sm-header-inner{height:64px}
@@ -250,5 +285,6 @@
   .sm-nav a[href="#receipt"]{display:none}
 }
 @media (prefers-reduced-motion:reduce){
+  .pl-ledger li{animation:none}
   .sm-page *,.sm-page *::before,.sm-page *::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important}
 }

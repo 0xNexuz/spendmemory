@@ -3,6 +3,7 @@ import { ArrowRight, Check, Copy, Github, LockKeyhole, RotateCcw } from 'lucide-
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
 import { SiteFooter } from './SiteFooter';
+import { ProofList } from './ProofList';
 import { useActiveSection, useScrolled } from './useActiveSection';
 import './public-demo.css';
 
@@ -37,7 +38,7 @@ export function PublicDemo() {
   const [learned, setLearned] = useState(false);
   const [copied, setCopied] = useState(false);
   const scrolled = useScrolled(12);
-  const section = useActiveSection(['top', 'replay', 'receipt'], 'top');
+  const section = useActiveSection(['top', 'replay', 'receipt', 'ledger'], 'top');
 
   async function copyBlob() {
     try {
@@ -59,6 +60,7 @@ export function PublicDemo() {
           <a href="/">Live app</a>
           <a href="#replay" aria-current={section === 'replay' ? 'location' : undefined}>Replay</a>
           <a href="#receipt" aria-current={section === 'receipt' ? 'location' : undefined}>Receipt</a>
+          <a href="#ledger" aria-current={section === 'ledger' ? 'location' : undefined}>Ledger</a>
           <a className="sm-nav-repo" href={repoUrl} target="_blank" rel="noreferrer" aria-label="Source on GitHub"><Github size={16}/><span>Source</span></a>
         </nav>
       </div>
@@ -152,6 +154,8 @@ export function PublicDemo() {
         </div>
       </div>
     </section>
+
+    <ProofList/>
 
     <section className="sm-callout">
       <LockKeyhole size={24}/>

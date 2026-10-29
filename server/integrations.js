@@ -67,6 +67,13 @@ export async function recall(proposal, namespace) {
 }
 
 /** The most recent memories in a namespace, used to spot a proposal that already has a saved decision. */
+/** Every memory in a small namespace, newest first, for the public proof list. */
+export async function recallRecent(namespace) {
+  const client = memoryClient(namespace);
+  const response = await client.recall({ query: 'SpendMemory payment decision', limit: RECALL_LIMIT, sort: 'recent' });
+  return response.results || [];
+}
+
 export async function recallByProposal(proposal, namespace) {
   const client = memoryClient(namespace);
   const response = await client.recall({ query: `SpendMemory payment decision for merchant ${proposal.merchant} in category ${proposal.category}${proposal.walletKey ? ` for wallet ${proposal.walletKey}` : ''}`, limit: RECALL_LIMIT, sort: 'recent' });

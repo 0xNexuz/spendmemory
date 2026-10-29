@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, walletKey, WRITE_LIMIT } from '../server/hosted.js';
+import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, toProof, walletKey, WRITE_LIMIT } from '../server/hosted.js';
 import { applyPaymentCheck, reconcilePayment } from '../server/policy.js';
 
 const SECRET = 'test-secret';
@@ -275,4 +275,22 @@ test('a ticket issued before per-wallet memory must be evaluated again', async (
   const res = await call(createHandler(deps), { method: 'POST', action: 'remember', body: { ticket: old, decision: 'decline', reason: 'Saved from an old tab.' } });
   assert.equal(res.statusCode, 400);
   assert.equal(calls.remember.length, 0);
+});
+
+test('the proof list shows checkable facts and hides personal notes', async () => {
+  const saved = (o) => ({ blob_id: o.blob, text: JSON.stringify({ app: 'spendmemory', v: 1, merchant: 'My landlord', category: 'rent', decision: o.decision, reason: 'private note', walletKey: 'w_abc', createdAt: o.at, ...(o.payment ? { payment: o.payment } : {}) }) });
+  const items = [
+    saved({ blob: 'b-old', decision: 'approve', at: '2026-10-28T09:00:00.000Z' }),
+    saved({ blob: 'b-new', decision: 'decline', at: '2026-10-29T09:00:00.000Z', payment: { digest: DIGEST, checkpoint: 9 } }),
+    { blob_id: 'junk', text: 'not json' },
+    { blob_id: 'other', text: JSON.stringify({ app: 'someone-else', decision: 'approve' }) },
+  ];
+  const { deps } = fakes({ recallRecent: async (ns) => { assert.equal(ns, LIVE_NAMESPACE); return items; } });
+  const res = await call(createHandler(deps), { action: 'proofs' });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.proofs.map((p) => p.blobId), ['b-new', 'b-old']);
+  assert.deepEqual(res.body.proofs[0].payment, { digest: DIGEST, checkpoint: 9 });
+  const text = JSON.stringify(res.body);
+  for (const secret of ['My landlord', 'private note', 'w_abc']) assert.equal(text.includes(secret), false, `${secret} leaked`);
+  assert.equal(toProof({ blob_id: 'x', text: '{}' }), null);
 });

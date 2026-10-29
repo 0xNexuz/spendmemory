@@ -1,5 +1,5 @@
 import { createHandler } from '../server/hosted.js';
-import { beginRemember, getBalance, getTransaction, hasMemory, hasTatum, listProductMemories, memoryJobStatus, recall, recallByProposal } from '../server/integrations.js';
+import { beginRemember, getBalance, getTransaction, hasMemory, hasTatum, listProductMemories, memoryJobStatus, recall, recallByProposal, recallRecent } from '../server/integrations.js';
 
 export default createHandler({
   hasMemory,
@@ -8,6 +8,7 @@ export default createHandler({
   getTransaction,
   recall,
   recallByProposal,
+  recallRecent,
   beginRemember,
   listProductMemories,
   memoryJobStatus,

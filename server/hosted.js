@@ -77,6 +77,25 @@ export function forWallet(memories, key) {
   return memories.filter((m) => m.walletKey === key);
 }
 
+/**
+ * Public evidence for one saved visitor decision. Deliberately leaves out the merchant label, the reason
+ * and the wallet key: those are the visitor's own notes. Keeps what anyone can check.
+ */
+export function toProof(item) {
+  let m;
+  try { m = JSON.parse(item.text); } catch { return null; }
+  if (m?.app !== 'spendmemory' || !['approve', 'decline'].includes(m.decision) || !item.blob_id) return null;
+  return {
+    blobId: item.blob_id,
+    decision: m.decision,
+    category: typeof m.category === 'string' ? m.category.slice(0, 50) : null,
+    createdAt: m.createdAt || item.created_at || null,
+    walletBound: Boolean(m.walletKey),
+    signed: Boolean(m.signedBy),
+    payment: m.payment?.digest ? { digest: m.payment.digest, checkpoint: m.payment.checkpoint ?? null } : null,
+  };
+}
+
 export function idempotencyKey(proposalId) {
   return `spendmemory-proposal-${createHash('sha256').update(String(proposalId)).digest('hex').slice(0, 32)}`;
 }
@@ -178,6 +197,13 @@ export function createHandler(deps) {
         if (payload.payment) memory.payment = { digest: payload.payment.digest, checkpoint: payload.payment.checkpoint, verifiedBy: 'tatum-sui-graphql' };
         const accepted = await deps.beginRemember(memory, LIVE_NAMESPACE, { idempotencyKey: idempotencyKey(payload.id) });
         return send(res, 202, { jobId: accepted.job_id });
+      }
+
+      if (action === 'proofs' && req.method === 'GET') {
+        const items = await deps.recallRecent(LIVE_NAMESPACE);
+        const proofs = items.map(toProof).filter(Boolean)
+          .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        return send(res, 200, { namespace: LIVE_NAMESPACE, count: proofs.length, proofs });
       }
 
       if (action === 'memory-status' && req.method === 'GET') {

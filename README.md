@@ -11,7 +11,7 @@ Every decision you save becomes memory for the next review. It never sends a pay
 
 Built by [0xNexuz](https://github.com/0xNexuz) for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/)
 
-Saving a decision needs a Sui wallet signature. Tested with **Suiet**; Slush currently shows a "malicious website" warning for the vercel.app address.
+Saving a decision needs a Sui wallet signature. Tested with **Suiet**. Some wallets show a caution notice for newly deployed domains; if yours does, another Sui wallet will work.
 
 <img src="public/og.jpg" alt="SpendMemory artwork: ink gears, a row of stippled heads turning from one review to the next, and the last head wired to pinned clippings of past decisions" width="100%" />
 
@@ -118,4 +118,4 @@ tests/                  Policy, reconciliation and hosted API tests
 - Proposal history in the hosted app lives in each browser and does not follow you across devices.
 - The two decisions saved before wallet signing existed are not tied to a wallet and no longer affect any brief.
 - The save limits are checked just before each write, so a few simultaneous requests can slip past one.
-- Slush flags `spendmemory.vercel.app` as a malicious website, although the site is not on the public Sui wallet blocklist. Suiet works; a custom domain would likely clear the warning.
+- The app runs on a shared `vercel.app` domain, which some wallets treat with caution until a site is established. Signing has been tested with Suiet; moving to a dedicated domain is the long-term fix.

@@ -76,6 +76,8 @@
 | 2026-10-28 | Shared write limit in production | VERIFIED: `node --test tests/*.test.js` 25/25; disabling the shared limit fails its test. Production deployment `dpl_5DsAsbNY837aANMReYne7DC12EMm` READY at `c51fed1`; live `status` returned `recentSaves` 0, `recentSaveLimit` 15 and `demoLastSavedAt` 2026-10-28T20:18:22.056Z, so Walrus `created_at` values parse. |
 | 2026-10-28 | Per-wallet memory | VERIFIED locally: 28/28 tests; removing the wallet filter fails the per-wallet test. Hosted decisions now carry `walletKey` (sha256 of the lower-cased address, first 32 hex chars, `w_` prefix) and recall keeps only that wallet's memories; tickets issued before this change are refused with "evaluate again". Visitor namespace was empty, so nothing needed migrating. No ownership proof: anyone can enter any public address. |
 | 2026-10-28 | Hosted save path in production | VERIFIED: live `status` after deploy `dpl_GG5asz7vnoVDyrsHN3pqdZXX6Suc` showed `memoryCount` 2 in the visitor namespace, last saved 2026-10-28T21:38:46Z, so the idempotent `rememberBulk` write path confirmed real saves. Those 2 predate per-wallet memory, carry no `walletKey`, and are no longer recalled for any wallet. |
+| 2026-10-29 | Proof ledger in production | VERIFIED: `proofs` API action deployed via master `99cc854`; live call returned the 2 visitor decisions (blob IDs `x4kLsX41…`, `nDHJUFy6…`) with no merchant label, reason or wallet key. Replay page shows them under "Every decision since". |
+| 2026-10-29 | Wallet sign-to-save (branch `wallet-sign-to-save`) | VERIFIED: 31/31 local tests (removing verification fails the signature test). Vercel preview `dpl_4kNdBcQRnJzFwHXhELLtTCaNb1oa` READY (tsc + vite; wallet chunk 502 kB / 151 kB gzip, lazy). In a Vercel Sandbox with real `@mysten/sui`: an Ed25519 keypair signed the save message; the server accepted it (202, `signedBy: reviewed-wallet`) and refused another wallet's signature and a signature over a different decision (401). Built app in headless Chromium: wallet panel rendered `mysten-dapp-kit-connect-button`; clicking opened the connect modal listing Slush; no page errors (Slush metadata fetch blocked by CORS on localhost only). UNVERIFIED: a signature from a real browser wallet (needs a human with a wallet). |
 
 ## Decision Log
 
@@ -105,6 +107,11 @@
 
 - **Decision:** User asked for each person to have their own memory instead of one shared pool. Implemented as memory per reviewed wallet address.
 - **Status:** IMPLEMENTED and tested; deployed with commit below.
+
+### 2026-10-29 — Proof ledger and wallet signing
+
+- **Decision:** User approved a live ledger of genuine decisions on the replay page and requiring a wallet signature to save a decision (reviews stay open to anyone).
+- **Status:** Ledger DEPLOYED. Signing IMPLEMENTED and VERIFIED with real keys; merged after preview checks.
 
 ## Next Action
 

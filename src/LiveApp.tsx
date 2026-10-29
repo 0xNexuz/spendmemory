@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { saveMessage } from '../server/save-message.js';
 import { ArrowRight, Check, CheckCircle2, Github, RefreshCw, X } from 'lucide-react';
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
@@ -13,6 +14,16 @@ type Evaluation = { recommendation: string; reasons: string[]; balanceSui: strin
 type Entry = { id: string; merchant: string; category: string; amountSui: string; walletAddress: string; createdAt: string; evaluation: Evaluation; ticket: string; state: 'open' | 'pending' | 'confirmed' | 'failed'; decision?: string; reason?: string; jobId?: string; blobId?: string };
 type Status = { network: string; memoryCount: number; demoMemoryCount: number; totalMemoryCount: number; maxMemories: number; maxReviewSui: string };
 const STORAGE = 'spendmemory-public-reviews-v1';
+// The wallet kit only loads when someone is ready to save a decision.
+const WalletSave = lazy(() => import('./wallet/WalletSave'));
+
+class ApiError extends Error { constructor(message: string, readonly status: number) { super(message); } }
+
+/** Reads the server-signed ticket (it is signed, not encrypted) to build the message the wallet signs. */
+function ticketPayload(ticket: string): { id: string; wallet?: string; expiresAt: number } {
+  const body = ticket.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(body), (c) => c.charCodeAt(0))));
+}
 const repoUrl = 'https://github.com/0xNexuz/spendmemory';
 
 const VERDICT: Record<string, string> = { review: 'Review manually', consider: 'Consider approval', decline: 'Decline or investigate' };
@@ -22,7 +33,7 @@ const shortId = (v: string) => (v.length > 22 ? `${v.slice(0, 10)}…${v.slice(-
 async function request<T>(action: string, body?: unknown, extra = ''): Promise<T> {
   const response = await fetch(`/api/route?action=${action}${extra}`, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+  if (!response.ok) throw new ApiError(data.error || `Request failed (${response.status})`, response.status);
   return data;
 }
 
@@ -79,16 +90,27 @@ export function LiveApp() {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
-  async function saveDecision() {
+  function messageToSign() {
+    if (!selected) return Promise.reject(new Error('Choose a review first.'));
+    const t = ticketPayload(selected.ticket);
+    if (!t.wallet) return Promise.reject(new Error('This review was made before wallet signing. Evaluate it again.'));
+    return saveMessage({ walletAddress: t.wallet, proposalId: t.id, decision, reason, expiresAt: t.expiresAt });
+  }
+
+  async function saveDecision(signature: string) {
     if (!selected || selected.state !== 'open') return;
     setBusy(true); setError(''); setNotice('');
+    const open = selected;
     const pending: Entry = { ...selected, state: 'pending', decision, reason };
     replace(pending);
     try {
-      const result = await request<{ jobId: string }>('remember', { ticket: selected.ticket, decision, reason });
+      const result = await request<{ jobId: string }>('remember', { ticket: selected.ticket, decision, reason, signature });
       replace({ ...pending, jobId: result.jobId });
-      setNotice('Walrus accepted the write. Check status until it returns a confirmed blob ID.');
-    } catch (e) { setError(`${(e as Error).message} Write outcome may be uncertain. Create a new proposal only after checking the Walrus account.`); } finally { setBusy(false); }
+      setNotice('Signed and accepted by Walrus. Check status until it returns a confirmed blob ID.');
+    } catch (e) {
+      if (e instanceof ApiError && e.status < 500) { replace(open); setError(e.message); }
+      else setError(`${(e as Error).message} Write outcome may be uncertain. Create a new proposal only after checking the Walrus account.`);
+    } finally { setBusy(false); }
   }
 
   const demoCount = status?.demoMemoryCount;
@@ -173,7 +195,9 @@ export function LiveApp() {
                 <button type="button" aria-pressed={decision === 'approve'} onClick={() => setDecision('approve')}>Approve</button>
               </div>
               <label>Why did you decide this?<textarea required minLength={8} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="A specific rule or observation the next review should remember."/></label>
-              <button className="sm-button primary" disabled={busy || !selected.evaluation.memoryVerified || reason.trim().length < 8} onClick={saveDecision} type="button">Save decision to Walrus <ArrowRight size={17}/></button>
+              <Suspense fallback={<p className="ws-note">Loading wallet connect…</p>}>
+                <WalletSave expectedAddress={selected.walletAddress} disabled={busy || !selected.evaluation.memoryVerified || reason.trim().length < 8} getMessage={messageToSign} onSignature={saveDecision}/>
+              </Suspense>
             </div>}
             {selected.state === 'pending' && (selected.jobId
               ? <button className="sm-button ink lv-top" disabled={busy} onClick={() => checkJob(selected)} type="button"><RefreshCw size={16}/> Check write status</button>

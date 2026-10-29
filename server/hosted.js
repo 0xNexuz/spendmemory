@@ -1,4 +1,5 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { saveMessage } from './save-message.js';
 import { applyPaymentCheck, evaluatePolicy, mistToSui, normalizeLabel, parseSuiToMist, reconcilePayment, relevantMemories } from './policy.js';
 
 // The public Vercel API, written against injected integrations so it can be tested without network access.
@@ -176,7 +177,7 @@ export function createHandler(deps) {
           payment,
         };
         const verifiedPayment = payment?.matches ? { digest: payment.digest, checkpoint: payment.checkpoint } : null;
-        const signed = signTicket({ id: proposal.id, merchant: normalizeLabel(merchant), category: normalizeLabel(category), amountSui: proposal.amountSui, createdAt: proposal.createdAt, walletKey: wallet, payment: verifiedPayment, expiresAt: now() + TICKET_TTL_MS }, secret);
+        const signed = signTicket({ id: proposal.id, merchant: normalizeLabel(merchant), category: normalizeLabel(category), amountSui: proposal.amountSui, createdAt: proposal.createdAt, walletKey: wallet, wallet: walletAddress.toLowerCase(), payment: verifiedPayment, expiresAt: now() + TICKET_TTL_MS }, secret);
         return send(res, 200, { proposal, evaluation, ticket: signed });
       }
 
@@ -186,6 +187,12 @@ export function createHandler(deps) {
         const decision = String(req.body?.decision || '');
         const reason = String(req.body?.reason || '').trim();
         if (!['approve', 'decline'].includes(decision) || reason.length < 8 || reason.length > 500) throw new ClientError(400, 'Choose approve or decline and give a reason of 8–500 characters.');
+        if (!payload.wallet) throw new ClientError(400, 'This review was made before wallet signing. Evaluate it again.');
+        const signature = req.body?.signature;
+        if (typeof signature !== 'string' || signature.length < 16 || signature.length > 5000) throw new ClientError(401, 'Connect the wallet you are reviewing and sign to save this decision.');
+        const message = await saveMessage({ walletAddress: payload.wallet, proposalId: payload.id, decision, reason, expiresAt: payload.expiresAt });
+        try { await deps.verifySignature(new TextEncoder().encode(message), signature, payload.wallet); }
+        catch { throw new ClientError(401, 'That signature is not from the wallet being reviewed. Connect that wallet and sign again.'); }
         const ip = String(req.headers['x-real-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0] || 'unknown').trim();
         if (!allowWrite(ip)) throw new ClientError(429, 'Too many saved decisions from this connection. Try again in a few minutes.');
         const [existing, saved] = await Promise.all([deps.listProductMemories(LIVE_NAMESPACE), deps.recallByProposal(payload, LIVE_NAMESPACE)]);
@@ -193,7 +200,7 @@ export function createHandler(deps) {
         if (existing.length >= MAX_MEMORIES) throw new ClientError(429, 'Public demo memory cap reached. Evaluation remains available.');
         // Shared across every serverless instance: Walrus records when each memory was created.
         if (recentCount(existing, now()) >= GLOBAL_WRITE_LIMIT) throw new ClientError(429, 'Many decisions were saved in the last few minutes. Try again shortly.');
-        const memory = { app: 'spendmemory', v: 1, source: 'public-web', scenarioType: 'user-reported', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id, walletKey: payload.walletKey };
+        const memory = { app: 'spendmemory', v: 1, source: 'public-web', scenarioType: 'user-reported', merchant: payload.merchant, category: payload.category, amountSui: payload.amountSui, decision, reason, createdAt: payload.createdAt, proposalId: payload.id, walletKey: payload.walletKey, signedBy: 'reviewed-wallet' };
         if (payload.payment) memory.payment = { digest: payload.payment.digest, checkpoint: payload.payment.checkpoint, verifiedBy: 'tatum-sui-graphql' };
         const accepted = await deps.beginRemember(memory, LIVE_NAMESPACE, { idempotencyKey: idempotencyKey(payload.id) });
         return send(res, 202, { jobId: accepted.job_id });

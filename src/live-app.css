@@ -73,3 +73,12 @@
 .lv-hint{display:block;font-size:13px;font-weight:500;color:var(--ink-2);line-height:1.45}
 .lv-page .sm-rows dd.lv-ok{color:#24563a}
 .lv-page .sm-rows dd.lv-warn{color:#8d2e22}
+
+/* Wallet sign-to-save */
+.ws-panel{display:grid;gap:12px;justify-items:start;width:100%}
+.ws-note{margin:0;font-size:14px;color:var(--ink-2);max-width:52ch}
+.ws-warn{color:#7a4f0e}
+.ws-ready{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ws-chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;border:1px solid var(--rule);border-radius:3px;font-size:13px;font-weight:600;background:rgba(250,247,239,.7)}
+.ws-dot{width:7px;height:7px;border-radius:50%;background:#3f9a66}
+.ws-error{margin:0;font-size:13.5px;color:#8d2e22}

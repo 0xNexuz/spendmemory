@@ -2,6 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, toProof, walletKey, WRITE_LIMIT } from '../server/hosted.js';
 import { applyPaymentCheck, reconcilePayment } from '../server/policy.js';
+import { saveMessage } from '../server/save-message.js';
+
+// A stand-in wallet: a "signature" carries the exact message and the signing address.
+const fakeSign = (message, address) => `fake:${Buffer.from(JSON.stringify({ message, address })).toString('base64')}`;
+async function fakeVerify(bytes, signature, address) {
+  if (!signature.startsWith('fake:')) throw new Error('bad signature');
+  const { message, address: signer } = JSON.parse(Buffer.from(signature.slice(5), 'base64').toString());
+  if (message !== new TextDecoder().decode(bytes) || signer !== address) throw new Error('bad signature');
+}
+async function signedBy(ticket, decision, reason, address) {
+  const p = readTicket(ticket, SECRET, 1_700_000_000_000);
+  return fakeSign(await saveMessage({ walletAddress: p.wallet, proposalId: p.id, decision, reason, expiresAt: p.expiresAt }), address ?? p.wallet);
+}
 
 const SECRET = 'test-secret';
 const WALLET = `0x${'a'.repeat(64)}`;
@@ -24,6 +37,7 @@ function fakes(overrides = {}) {
     beginRemember: async (memory, namespace, options) => { calls.remember.push({ memory, namespace, options }); return { job_id: '00000000-0000-0000-0000-000000000001' }; },
     listProductMemories: async () => [],
     memoryJobStatus: async () => ({ status: 'done', blob_id: 'blob123' }),
+    verifySignature: fakeVerify,
     signingSecret: SECRET,
     maxReviewSui: '25',
     now: () => 1_700_000_000_000,
@@ -33,6 +47,9 @@ function fakes(overrides = {}) {
 }
 
 async function call(handler, { method = 'GET', action, body, query = {}, origin, host = 'spendmemory.vercel.app', ip = '203.0.113.7' } = {}) {
+  if (action === 'remember' && body && body.signature === undefined) {
+    try { body = { ...body, signature: await signedBy(body.ticket, body.decision, String(body.reason ?? '')) }; } catch { /* leave unsigned: the ticket itself is under test */ }
+  }
   const res = { statusCode: 0, body: null, headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
   await handler({ method, body, query: { action, ...query }, headers: { host, 'x-forwarded-for': `${ip}, 10.0.0.1`, ...(origin ? { origin } : {}) } }, res);
   return res;
@@ -293,4 +310,37 @@ test('the proof list shows checkable facts and hides personal notes', async () =
   const text = JSON.stringify(res.body);
   for (const secret of ['My landlord', 'private note', 'w_abc']) assert.equal(text.includes(secret), false, `${secret} leaked`);
   assert.equal(toProof({ blob_id: 'x', text: '{}' }), null);
+});
+
+test('saving needs a signature from the reviewed wallet', async () => {
+  const { deps, calls } = fakes();
+  const handler = createHandler(deps);
+  const evaluated = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody });
+  const ticket = evaluated.body.ticket;
+  const reason = 'Unrequested renewal, check the invoice.';
+  const attempts = {
+    missing: '',
+    otherWallet: await signedBy(ticket, 'decline', reason, OTHER),
+    otherDecision: await signedBy(ticket, 'approve', reason),
+    otherReason: await signedBy(ticket, 'decline', 'A different reason entirely.'),
+    garbage: 'not-a-real-signature-at-all',
+  };
+  for (const [name, signature] of Object.entries(attempts)) {
+    const res = await call(handler, { method: 'POST', action: 'remember', body: { ticket, decision: 'decline', reason, signature } });
+    assert.equal(res.statusCode, 401, name);
+  }
+  assert.equal(calls.remember.length, 0);
+  const ok = await call(handler, { method: 'POST', action: 'remember', body: { ticket, decision: 'decline', reason, signature: await signedBy(ticket, 'decline', reason) } });
+  assert.equal(ok.statusCode, 202);
+  assert.equal(calls.remember[0].memory.signedBy, 'reviewed-wallet');
+});
+
+test('the signed message names the wallet, proposal and decision and moves no funds', async () => {
+  const m = await saveMessage({ walletAddress: WALLET.toUpperCase().replace('0X', '0x'), proposalId: 'p-1', decision: 'decline', reason: '  Not needed  ', expiresAt: 1_700_000_100_000 });
+  assert.match(m, new RegExp(`Wallet: ${WALLET}`));
+  assert.match(m, /Proposal: p-1/);
+  assert.match(m, /Decision: decline/);
+  assert.match(m, /Reason SHA-256: [0-9a-f]{64}/);
+  assert.match(m, /does not move funds/);
+  assert.equal(m, await saveMessage({ walletAddress: WALLET, proposalId: 'p-1', decision: 'decline', reason: 'Not needed', expiresAt: 1_700_000_100_000 }));
 });

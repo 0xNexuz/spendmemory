@@ -166,6 +166,6 @@ export function PublicDemo() {
       <a href="/" className="sm-link-ink">Open the live app <ArrowRight size={16}/></a>
     </section>
 
-    <SiteFooter notice="Testing evidence: 50+ real Mainnet writes using example decisions. The scenario on this page is fictional; the write, its confirmation and the recall were real."/>
+    <SiteFooter/>
   </main>;
 }

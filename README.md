@@ -118,4 +118,4 @@ tests/                  Policy, reconciliation and hosted API tests
 - Proposal history in the hosted app lives in each browser and does not follow you across devices.
 - The two decisions saved before wallet signing existed are not tied to a wallet and no longer affect any brief.
 - The save limits are checked just before each write, so a few simultaneous requests can slip past one.
-- The app runs on a shared `vercel.app` domain, which some wallets treat with caution until a site is established. Signing has been tested with Suiet; moving to a dedicated domain is the long-term fix.
+- The app runs on a shared `vercel.app` domain, which some wallets treat with caution until a site is established. Signing has been tested with Suiet 

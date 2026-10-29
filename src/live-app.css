@@ -82,3 +82,14 @@
 .ws-chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;border:1px solid var(--rule);border-radius:3px;font-size:13px;font-weight:600;background:rgba(250,247,239,.7)}
 .ws-dot{width:7px;height:7px;border-radius:50%;background:#3f9a66}
 .ws-error{margin:0;font-size:13.5px;color:#8d2e22}
+
+/* Past decisions for the reviewed wallet */
+.lv-past{margin-top:18px;padding-top:16px;border-top:1px dashed var(--rule);display:grid;gap:12px}
+.lv-past-title{margin:0;font-size:14px;font-weight:700}
+.lv-past ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.lv-past li{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:center;font-size:14px}
+.lv-past .pl-stamp{font-size:14px;padding:2px 7px}
+.lv-past-date{color:var(--ink-2);font-size:13px}
+.lv-past-reason{overflow-wrap:anywhere}
+.lv-past-reason em{color:var(--ink-2)}
+@media (max-width:700px){.lv-past li{grid-template-columns:auto 1fr}.lv-past-reason{grid-column:1/-1}}

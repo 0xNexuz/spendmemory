@@ -19,3 +19,16 @@ export async function saveMessage({ walletAddress, proposalId, decision, reason,
     'Signing only saves a memory. It does not move funds or approve a transaction.',
   ].join('\n');
 }
+
+/** The message a wallet signs to read back its own saved reasons for one review. It changes nothing. */
+export function viewMessage({ walletAddress, proposalId, expiresAt }) {
+  return [
+    'SpendMemory: show my saved reasons.',
+    '',
+    `Wallet: ${String(walletAddress).trim().toLowerCase()}`,
+    `Proposal: ${proposalId}`,
+    `Valid until: ${new Date(expiresAt).toISOString()}`,
+    '',
+    'Signing only reveals your own notes to you. It does not save anything or move funds.',
+  ].join('\n');
+}

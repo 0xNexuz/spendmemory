@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { saveMessage } from './save-message.js';
+import { saveMessage, viewMessage } from './save-message.js';
 import { applyPaymentCheck, evaluatePolicy, mistToSui, normalizeLabel, parseSuiToMist, reconcilePayment, relevantMemories } from './policy.js';
 
 // The public Vercel API, written against injected integrations so it can be tested without network access.
@@ -173,7 +173,8 @@ export function createHandler(deps) {
           memoryVerified: memoryResult.status === 'fulfilled',
           chainError: balanceResult.status === 'rejected' ? scrub(balanceResult.reason) : null,
           memoryError: memoryResult.status === 'rejected' ? scrub(memoryResult.reason) : null,
-          matchedMemories: matches.map(({ blobId, decision, reason, createdAt }) => ({ blobId, decision, reason, createdAt })),
+          // Reasons are the wallet owner's notes: they come back only through the signed `reasons` action.
+          matchedMemories: matches.map(({ blobId, decision, createdAt }) => ({ blobId, decision, createdAt })),
           payment,
         };
         const verifiedPayment = payment?.matches ? { digest: payment.digest, checkpoint: payment.checkpoint } : null;
@@ -204,6 +205,19 @@ export function createHandler(deps) {
         if (payload.payment) memory.payment = { digest: payload.payment.digest, checkpoint: payload.payment.checkpoint, verifiedBy: 'tatum-sui-graphql' };
         const accepted = await deps.beginRemember(memory, LIVE_NAMESPACE, { idempotencyKey: idempotencyKey(payload.id) });
         return send(res, 202, { jobId: accepted.job_id });
+      }
+
+      if (action === 'reasons' && req.method === 'POST') {
+        const payload = readTicket(req.body?.ticket, secret, now());
+        if (!payload.wallet || !payload.walletKey) throw new ClientError(400, 'This review was made before wallet signing. Evaluate it again.');
+        const signature = req.body?.signature;
+        if (typeof signature !== 'string' || signature.length < 16 || signature.length > 5000) throw new ClientError(401, 'Connect the wallet you are reviewing and sign to see its reasons.');
+        const message = viewMessage({ walletAddress: payload.wallet, proposalId: payload.id, expiresAt: payload.expiresAt });
+        try { await deps.verifySignature(new TextEncoder().encode(message), signature, payload.wallet); }
+        catch { throw new ClientError(401, 'That signature is not from the wallet being reviewed. Connect that wallet and sign again.'); }
+        const proposal = { merchant: payload.merchant, category: payload.category, walletKey: payload.walletKey };
+        const matches = forWallet(relevantMemories(await deps.recall(proposal, LIVE_NAMESPACE), proposal), payload.walletKey);
+        return send(res, 200, { reasons: matches.map(({ blobId, decision, reason, createdAt }) => ({ blobId, decision, reason, createdAt })) });
       }
 
       if (action === 'proofs' && req.method === 'GET') {

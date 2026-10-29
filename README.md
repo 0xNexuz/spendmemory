@@ -4,10 +4,10 @@
 
 **A Sui payment review that remembers why.**
 
-SpendMemory checks a wallet through Tatum, recalls your past decisions from Walrus Memory, and leaves the final call to you.
+SpendMemory checks a wallet through Tatum, recalls that wallet's past decisions from Walrus Memory, and leaves the final call to you.
 Every decision you save becomes memory for the next review. It never sends a payment.
 
-[**Live app**](https://spendmemory.vercel.app/) · [**Verified replay**](https://spendmemory.vercel.app/?replay=1) · [**Source**](https://github.com/0xNexuz/spendmemory)
+[**Live app**](https://spendmemory.vercel.app/) · [**Verified replay and ledger**](https://spendmemory.vercel.app/?replay=1) · [**Source**](https://github.com/0xNexuz/spendmemory)
 
 Built by [0xNexuz](https://github.com/0xNexuz) for the [Walrus × Tatum Total Recall hackathon](https://recall-tatum-walrus.vercel.app/)
 
@@ -19,154 +19,100 @@ Built by [0xNexuz](https://github.com/0xNexuz) for the [Walrus × Tatum Total Re
 
 ## Why
 
-People approve the same recurring charges, subscriptions and vendor payments again and again, and the reasoning behind each decision is lost the moment it is made. The next time a similar charge appears, you start from zero.
-
-SpendMemory keeps that reasoning. When you decline an unfamiliar recurring charge and say why, the decision is written to Walrus Memory on Mainnet. The next time the same merchant and category show up, the review brief recalls it and changes its suggestion. You still decide.
+The same charges come back every month, and the reason you approved or declined them last time is gone. SpendMemory keeps that reason on Walrus Mainnet, tied to your wallet, and brings it back the next time the same merchant and category appear.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A[Payment proposal<br/>merchant, category,<br/>amount, Sui address] --> B[Tatum Sui GraphQL<br/>live SUI balance]
-    A --> C[Walrus Memory<br/>recall matching decisions]
-    B --> D{Deterministic policy}
+    A[Proposal<br/>merchant, category,<br/>amount, Sui address] --> B[Tatum<br/>live SUI balance,<br/>optional payment check]
+    A --> C[Walrus Memory<br/>this wallet's past decisions]
+    B --> D{Policy}
     C --> D
-    D --> E[Review brief<br/>review / consider / decline]
-    E --> F[Human decides<br/>approve or decline + reason]
-    F --> G[Walrus Memory write<br/>job ID]
-    G --> H[Confirmed blob ID]
-    H -. next review .-> C
+    D --> E[Brief<br/>review / consider / decline]
+    E --> F[You decide<br/>and sign with the wallet]
+    F --> G[Walrus write<br/>confirmed blob ID]
+    G -. next review .-> C
 ```
 
-1. **Propose.** Enter a merchant, category, amount and a public Sui address.
-2. **Check.** Tatum returns the live Mainnet SUI balance. Walrus Memory returns past decisions with the exact same merchant and category.
-3. **Brief.** A small, deterministic policy turns that evidence into a suggestion: review manually, consider approval, or decline and investigate.
-4. **Decide.** A person approves or declines, writes the reason, and signs a short message with the wallet being reviewed. Signing is free and moves no funds; it proves the decision comes from that wallet's owner.
-5. **Remember.** The decision is written to Walrus Memory on Mainnet. It only counts as confirmed once Walrus returns a blob ID.
-6. **Recall.** The next review of that wallet with the same merchant and category sees that decision, and the suggestion changes.
+1. **Propose.** Enter a merchant, category, amount and a Sui address. If you already paid, add the transaction digest.
+2. **Check.** Tatum returns the live Mainnet balance and, for a digest, confirms the wallet paid exactly that amount. Walrus returns past decisions for the same wallet, merchant and category.
+3. **Brief.** A deterministic policy suggests review, consider approval, or decline and investigate.
+4. **Decide.** Approve or decline, write why, and sign a short message with the wallet. Signing is free and moves no funds.
+5. **Remember.** The server checks the signature and writes the decision to Walrus Mainnet. It counts once Walrus returns a blob ID.
+6. **Recall.** The next matching review of that wallet sees the decision, and the suggestion changes.
 
 ## Proof on Mainnet
 
-The learning loop has been run against Walrus Mainnet and Sui Mainnet, not a testnet or a mock.
+| What | Evidence |
+| --- | --- |
+| A saved decision changes a later review | A `DemoCloud subscription` / software / 0.02 SUI proposal returned **review**. A **decline** was saved as blob `VpDjzjIwtRW1UQJ8LOrUjUp2rbfV-RaIU36yB8DNSdg`. After a server restart, the same proposal returned **decline**, recalling that blob. [Replay it](https://spendmemory.vercel.app/?replay=1). |
+| Every genuine decision since | The [ledger](https://spendmemory.vercel.app/?replay=1#ledger) lists each decision saved through the live app, read live from Walrus: blob ID, outcome, date, whether the wallet signed it, and any payment Tatum verified, linked to Suiscan. |
+| Tatum on Sui Mainnet | Balance and transaction queries through Tatum's Sui GraphQL RPC, cross-checked against Sui's public endpoint. |
 
-| What | Evidence | Status |
-| --- | --- | --- |
-| First decision changes a later review | A fictional `DemoCloud subscription` / `software` / 0.02 SUI proposal returned **review**. A **decline** was saved as blob `VpDjzjIwtRW1UQJ8LOrUjUp2rbfV-RaIU36yB8DNSdg`. After a server restart the same proposal returned **decline**, recalling that blob. | Verified 2026-10-28 |
-| Hosted write from the public app | The Vercel app evaluated a fictional proposal with Tatum and Walrus both verified, and its write returned blob `M0Xo9ZQKokoCeIxxzh3ZOHC6QlJXGgpuXBCJhL4nKsI`. | Verified 2026-10-28 |
-| Memory count | The `spendmemory-mainnet` namespace held **51 confirmed memories** at the hosted check: 1 original demo decision, 49 seeded demo decisions, 1 hosted flow check. The live app reads this count directly from Walrus. | Verified 2026-10-28 |
-| Tatum reads | Sui Mainnet balance and transaction queries through Tatum GraphQL, cross-checked against Sui's public GraphQL endpoint. | Verified 2026-10-28 |
-| Every genuine decision since | The [ledger on the replay page](https://spendmemory.vercel.app/?replay=1#ledger) reads the visitor namespace live from Walrus and lists each saved decision's blob ID, outcome, date, whether the wallet signed it, and any payment Tatum verified (linked to Suiscan). Merchant labels and reasons stay private. | Live |
-
-> **Honest labelling.** All 51 memories describe **fictional scenarios** written for the demo. The writes are real Mainnet writes with real blob IDs, but they are not decisions from independent users. The 49 seeds are labelled `fictional: true` and their reasons start with "Fictional demo decision". A separate integration-check namespace is excluded from every count.
+The 51 memories written while testing (in the `spendmemory-mainnet` namespace) are real Mainnet writes describing fictional scenarios. They are labelled as such and kept apart from visitor decisions, which live in `spendmemory-user-decisions-v1`.
 
 ## Sponsor integrations
 
-| Sponsor | Used for | Where |
-| --- | --- | --- |
-| **Tatum** | Sui Mainnet GraphQL RPC: live SUI balance for the proposal's wallet, and payment verification. If you paste the digest of a payment you already made, Tatum fetches the transaction and SpendMemory checks that it succeeded, that your wallet paid, and that another address received exactly the proposed SUI. A verified payment is saved with the decision. The API key is sent server-side as `x-api-key`. | [`server/integrations.js`](server/integrations.js), [`server/policy.js`](server/policy.js) |
-| **Walrus Memory** | `@mysten-incubation/memwal` SDK: recall decisions, write new ones with an idempotency key, poll write jobs until a blob ID is returned, and list the namespace for the live count. Only the Mainnet relayer is accepted. | [`server/integrations.js`](server/integrations.js), [`server/hosted.js`](server/hosted.js) |
+| Sponsor | Used for |
+| --- | --- |
+| **Tatum** | Sui Mainnet GraphQL RPC for the wallet's live SUI balance, and for fetching a payment transaction to check it succeeded, came from this wallet and paid exactly the proposed amount. |
+| **Walrus Memory** | `@mysten-incubation/memwal` on the Mainnet relayer only: recall, writes with an idempotency key, job polling until a blob ID, and the namespace listing behind the live counts and ledger. |
 
-Remove either one and the core loop stops: without Tatum there is no live balance check, and without Walrus there is nothing to recall.
+Without Tatum there is no balance or payment check; without Walrus there is nothing to recall.
 
-## Safety boundaries
+## Privacy and safety
 
-- **No payments, ever.** SpendMemory does not sign, hold keys for, or send transactions. It only reads balances and transactions.
-- **Memory advises, people decide.** A recalled approval can only suggest "consider approval". Not having enough SUI is a hard stop that no memory can override.
-- **Exact matching, per wallet.** Only structured SpendMemory records saved for the same wallet, merchant and category influence a brief, so other wallets' decisions and unrelated memories cannot leak in.
-- **One decision per proposal.** Each hosted write carries an idempotency key derived from the proposal, and a proposal that already has a saved decision is refused. A decision is locked while its write is pending; if the outcome is uncertain, the app asks you to check the Walrus account instead of writing a possible duplicate.
-- **Signed by the wallet's owner.** Saving requires a personal-message signature from the reviewed wallet over the wallet, proposal, decision and a hash of the reason. The server rebuilds that message itself and verifies it with `@mysten/sui` (zkLogin wallets included), so a signature cannot be reused for another decision or another wallet.
-- **Signed proposals.** The hosted API only saves decisions for proposals it evaluated itself, using an HMAC-signed ticket that expires after 30 minutes. A verified payment can only enter memory through that ticket, so a browser cannot claim a payment Tatum did not see.
-- **Payment checks only add caution.** A payment that does not match can turn "consider approval" into "review", never the other way round.
-- **Secrets stay on the server.** Tatum and Walrus credentials live in `.env` locally and in Vercel environment variables when hosted. They are never sent to the browser.
-
-## Two ways to run it
-
-| | Public app on Vercel | Local workspace |
-| --- | --- | --- |
-| URL | [spendmemory.vercel.app](https://spendmemory.vercel.app/) | `http://127.0.0.1:5173` |
-| API | Vercel serverless function, [`api/route.js`](api/route.js) | Express server, [`server/index.js`](server/index.js) |
-| Your proposal history | Stored in your browser | Stored in `.local/data.json` (ignored by Git) |
-| Confirmed decisions | Visitor namespace `spendmemory-user-decisions-v1`, each decision tagged with its wallet | Your own Walrus account and namespace |
-| Writes | Signed by the reviewed wallet; 15 per 10 minutes across everyone, 5 per connection, 100 in total | Single local operator |
-| Extra | Payment verification, [verified replay](https://spendmemory.vercel.app/?replay=1) of the first learning loop | Transaction lookup, memory trail |
+- **No payments.** SpendMemory never builds, signs or sends a transaction.
+- **Memory advises, you decide.** A remembered approval can only suggest "consider approval". Not enough SUI is a hard stop.
+- **Your memory is yours.** Decisions are stored with a hash of the wallet address and only affect that wallet's reviews. Saving needs the wallet's signature over the exact wallet, proposal, decision and reason, verified on the server with `@mysten/sui` (zkLogin included).
+- **Reasons stay private.** Anyone can review a public address, but the brief only shows how many past decisions matched and whether they were approvals or declines. The reasons come back only after the wallet's owner signs to view them. The public ledger never shows merchant names, reasons or wallet keys.
+- **No duplicates or replays.** Each proposal is saved at most once; the server's signed ticket expires after 30 minutes, and a signature cannot be reused for another decision.
+- **Limits.** Saves are capped at 15 per 10 minutes across all visitors, 5 per connection, and 100 in total.
+- **Secrets stay on the server.** Tatum and Walrus credentials are server-side only.
 
 ## Run locally
 
-Requires Node.js 20.19+ and npm.
+Requires Node.js 20.19+.
 
 ```bash
 npm install
 cp .env.example .env      # Windows PowerShell: Copy-Item .env.example .env
-npm run dev
+npm run dev               # API on 127.0.0.1:8787, app on http://127.0.0.1:5173
+npm test                  # policy, payment, signature and API tests, no network needed
+npm run build             # type check and production bundle
 ```
-
-Open `http://127.0.0.1:5173`. The API binds to `127.0.0.1:8787` and Vite proxies `/api` to it.
 
 Create a Mainnet Walrus Memory account and delegate key at [memory.walrus.xyz](https://memory.walrus.xyz/), then fill in `.env`:
 
 | Variable | Purpose |
 | --- | --- |
 | `TATUM_API_KEY` | Tatum key for Sui Mainnet GraphQL |
-| `MEMWAL_PRIVATE_KEY` | Walrus Memory delegate key (server only) |
-| `MEMWAL_ACCOUNT_ID` | Walrus Memory account ID |
-| `MEMWAL_SERVER_URL` | Must be `https://relayer.memory.walrus.xyz`; other relayers are refused so a testnet write cannot pass as Mainnet proof |
-| `MEMWAL_NAMESPACE` | Namespace for decisions, default `spendmemory-mainnet` |
+| `MEMWAL_PRIVATE_KEY`, `MEMWAL_ACCOUNT_ID` | Walrus Memory delegate key and account (server only) |
+| `MEMWAL_SERVER_URL` | Must be `https://relayer.memory.walrus.xyz` |
+| `MEMWAL_NAMESPACE` | Local namespace, default `spendmemory-mainnet` |
 | `MAX_REVIEW_SUI` | Amounts above this always need manual review, default `25` |
-| `APP_SIGNING_SECRET` | Hosted API only: signs proposal tickets so a decision can only be saved for a proposal the server evaluated |
-| `PORT` | Local API port, default `8787` |
-
-## Scripts
-
-```bash
-npm test       # policy, payment reconciliation and hosted API tests (no network needed)
-npm run build  # TypeScript check and production bundle
-npm run dev    # local API and frontend together
-```
+| `APP_SIGNING_SECRET` | Hosted API only: signs proposal tickets |
 
 ## Project structure
 
 ```text
-api/route.js                 Vercel entry point; wires real integrations into server/hosted.js
-server/
-  index.js                   Local Express API
-  hosted.js                  Public API: tickets, signatures, validation, limits, duplicate checks, proof list
-  save-message.js            The exact message a wallet signs to save a decision (shared with the browser)
-  integrations.js            Tatum GraphQL and Walrus Memory clients
-  policy.js                  Amount parsing, memory matching, recommendation policy, payment reconciliation
-  store.js                   Local proposal storage
-src/
-  LiveApp.tsx                Public app (production homepage)
-  PublicDemo.tsx             Verified replay (/?replay=1)
-  ProofList.tsx              Live ledger of genuine decisions on the replay page
-  wallet/                    Sui wallet connect and sign-to-save (@mysten/dapp-kit-react, loaded on demand)
-  main.tsx                   Local workspace and routing
-  art/                       Hand-drawn artwork, drawn in code
-public/art/                  Stippled head images used by the artwork
-scripts/seed-demo-memories.mjs  Seeds labelled fictional demo decisions
-tests/                       Policy, reconciliation and hosted API tests
+api/route.js            Vercel entry: real Tatum, Walrus and signature checks wired into server/hosted.js
+server/hosted.js        Public API: evaluate, signed save, signed reasons, proof ledger, limits
+server/save-message.js  The exact messages a wallet signs (shared with the browser)
+server/policy.js        Amount parsing, memory matching, policy, payment reconciliation
+server/integrations.js  Tatum GraphQL and Walrus Memory clients
+server/index.js         Local single-operator API
+src/LiveApp.tsx         Public app
+src/PublicDemo.tsx      Verified replay; src/ProofList.tsx is its live ledger
+src/wallet/             Wallet connect and signing (@mysten/dapp-kit-react, loaded on demand)
+src/art/                The notebook artwork, drawn in code
+tests/                  Policy, reconciliation and hosted API tests
 ```
-
-## Design
-
-The interface is drawn as an inventor's notebook, down to the last page: a signed colophon with an index and an ink stamp for the one rule that never bends. The hero artwork merges three ideas: sepia gears and ledger boxes for the review rules, a row of stippled heads turning from one review to the next, and the last head wired to pinned clippings of past decisions. Gears, ledger, wires and clippings are drawn in code in [`src/art/`](src/art), so they scale cleanly and animate: wires draw in on load, gears turn slowly, and hovering a clipping lifts it and lights its wire. Motion switches off for visitors who prefer reduced motion.
 
 ## Known limitations
 
-- **Open public writes.** Anyone can save a decision from the hosted app. Saves are limited to 15 per 10 minutes across all visitors, counted from the timestamps Walrus keeps for each memory, plus 5 per connection. These checks run just before each write, so a few simultaneous requests can slip past a limit or the 100-memory cap. A Vercel firewall rate-limit rule on `POST /api/route?action=remember` would add a per-IP limit at the edge; it is optional.
-- **Wallet signature needed to save.** Anyone can review any public address, but only someone who can sign with that wallet can save a decision to its memory. Decisions saved before signing was added (2 so far) are not wallet-bound and no longer influence any brief.
-- **Browser-local history.** Hosted proposal history lives in each visitor's browser and does not follow them across devices.
-- **User-reported decisions.** Visitor decisions are what the visitor says they decided. Only decisions saved with a verified payment are tied to something that happened on chain.
-- **Demo data.** The memories in `spendmemory-mainnet` describe fictional scenarios (see [Proof on Mainnet](#proof-on-mainnet)) and do not affect hosted recommendations.
-
-## Before submission
-
-- [ ] Record a 2–3 minute demo video
-- [ ] Publish the blog post
-- [ ] Gather eligible submission evidence beyond the fictional demo writes
-- [ ] Confirm the special prize wording with the organizers (the event page and the rules describe it differently)
-
-Submission has not been completed.
-
-## Visitor and demo memory separation
-
-The hosted app uses `spendmemory-user-decisions-v1` for visitor recall and writes. Existing examples remain in `spendmemory-mainnet` and do not affect hosted recommendations. The app displays separate visitor and demo counts. Visitor decisions are user-reported unless they were saved with a payment that Tatum verified. Each one is tagged with a hash of its wallet address and only affects that wallet's later reviews.
+- Visitor decisions are what the visitor says they decided, unless saved with a payment Tatum verified.
+- Proposal history in the hosted app lives in each browser and does not follow you across devices.
+- The two decisions saved before wallet signing existed are not tied to a wallet and no longer affect any brief.
+- The save limits are checked just before each write, so a few simultaneous requests can slip past one.

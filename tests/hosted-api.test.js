@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createdAtMs, createHandler, GLOBAL_WRITE_LIMIT, idempotencyKey, LIVE_NAMESPACE, MAX_MEMORIES, readTicket, recentCount, signTicket, toProof, walletKey, WRITE_LIMIT } from '../server/hosted.js';
 import { applyPaymentCheck, reconcilePayment } from '../server/policy.js';
-import { saveMessage } from '../server/save-message.js';
+import { saveMessage, viewMessage } from '../server/save-message.js';
 
 // A stand-in wallet: a "signature" carries the exact message and the signing address.
 const fakeSign = (message, address) => `fake:${Buffer.from(JSON.stringify({ message, address })).toString('base64')}`;
@@ -343,4 +343,23 @@ test('the signed message names the wallet, proposal and decision and moves no fu
   assert.match(m, /Reason SHA-256: [0-9a-f]{64}/);
   assert.match(m, /does not move funds/);
   assert.equal(m, await saveMessage({ walletAddress: WALLET, proposalId: 'p-1', decision: 'decline', reason: 'Not needed', expiresAt: 1_700_000_100_000 }));
+});
+
+test('reasons stay private: the brief omits them and only the signed-in owner can read them', async () => {
+  const mine = walletKey(WALLET);
+  const memory = (key, reason) => ({ text: JSON.stringify({ app: 'spendmemory', v: 1, merchant: 'democloud subscription', category: 'software', decision: 'decline', reason, walletKey: key, createdAt: '2026-10-28T10:00:00.000Z' }), blob_id: `b-${reason.length}` });
+  const { deps } = fakes({ recall: async () => [memory(mine, 'My private note about this charge'), memory(walletKey(OTHER), 'Someone else entirely')] });
+  const handler = createHandler(deps);
+  const evaluated = await call(handler, { method: 'POST', action: 'evaluate', body: proposalBody });
+  assert.equal(evaluated.body.evaluation.matchedMemories.length, 1);
+  assert.equal(JSON.stringify(evaluated.body).includes('private note'), false);
+  const p = readTicket(evaluated.body.ticket, SECRET, 1_700_000_000_000);
+  const view = viewMessage({ walletAddress: p.wallet, proposalId: p.id, expiresAt: p.expiresAt });
+  for (const signature of [undefined, fakeSign(view, OTHER), fakeSign(view.replace('Proposal:', 'Proposal: x'), p.wallet)]) {
+    const res = await call(handler, { method: 'POST', action: 'reasons', body: { ticket: evaluated.body.ticket, signature } });
+    assert.equal(res.statusCode, 401);
+  }
+  const ok = await call(handler, { method: 'POST', action: 'reasons', body: { ticket: evaluated.body.ticket, signature: fakeSign(view, p.wallet) } });
+  assert.equal(ok.statusCode, 200);
+  assert.deepEqual(ok.body.reasons.map((r) => r.reason), ['My private note about this charge']);
 });

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { saveMessage } from '../server/save-message.js';
+import { saveMessage, viewMessage } from '../server/save-message.js';
 import { ArrowRight, Check, CheckCircle2, Github, RefreshCw, X } from 'lucide-react';
 import { MemoryArtwork } from './art/MemoryArtwork';
 import { StippleMark } from './art/StippleMark';
@@ -8,7 +8,7 @@ import { useActiveSection, useScrolled } from './useActiveSection';
 import './public-demo.css';
 import './live-app.css';
 
-type Match = { blobId: string; decision: string; reason: string; createdAt: string };
+type Match = { blobId: string; decision: string; createdAt: string };
 type Payment = { digest: string; checked: boolean; succeeded?: boolean; walletPaid?: boolean; matches?: boolean; walletChangeSui?: string; checkpoint?: number | string | null; error: string | null };
 type Evaluation = { recommendation: string; reasons: string[]; balanceSui: string | null; chainVerified: boolean; memoryVerified: boolean; matchedMemories: Match[]; chainError: string | null; memoryError: string | null ; payment?: Payment | null };
 type Entry = { id: string; merchant: string; category: string; amountSui: string; walletAddress: string; createdAt: string; evaluation: Evaluation; ticket: string; state: 'open' | 'pending' | 'confirmed' | 'failed'; decision?: string; reason?: string; jobId?: string; blobId?: string };
@@ -58,6 +58,7 @@ export function LiveApp() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
   const selected = entries.find((e) => e.id === selectedId) || entries[0];
   const scrolled = useScrolled(12);
   const section = useActiveSection(['top', 'review', 'history'], 'top');
@@ -95,6 +96,19 @@ export function LiveApp() {
     const t = ticketPayload(selected.ticket);
     if (!t.wallet) return Promise.reject(new Error('This review was made before wallet signing. Evaluate it again.'));
     return saveMessage({ walletAddress: t.wallet, proposalId: t.id, decision, reason, expiresAt: t.expiresAt });
+  }
+
+  async function messageToView() {
+    if (!selected) throw new Error('Choose a review first.');
+    const t = ticketPayload(selected.ticket);
+    if (!t.wallet) throw new Error('This review was made before wallet signing. Evaluate it again.');
+    return viewMessage({ walletAddress: t.wallet, proposalId: t.id, expiresAt: t.expiresAt });
+  }
+
+  async function showReasons(signature: string) {
+    if (!selected) return;
+    const result = await request<{ reasons: { blobId: string; reason: string }[] }>('reasons', { ticket: selected.ticket, signature });
+    setRevealed((prev) => ({ ...prev, ...Object.fromEntries(result.reasons.map((r) => [r.blobId, r.reason])) }));
   }
 
   async function saveDecision(signature: string) {
@@ -185,6 +199,17 @@ export function LiveApp() {
               {selected.evaluation.payment && <div><dt>Payment on Sui</dt><dd className={selected.evaluation.payment.matches ? 'lv-ok' : 'lv-warn'}>{!selected.evaluation.payment.checked ? 'Could not check' : selected.evaluation.payment.matches ? `Verified, ${selected.amountSui} SUI paid` : selected.evaluation.payment.succeeded ? 'Does not match' : 'Transaction failed'}</dd></div>}
             </dl>
             <ul className="lv-reasons">{selected.evaluation.reasons.map((item, i) => <li key={i}><Check size={15}/>{item}</li>)}</ul>
+            {selected.evaluation.matchedMemories.length > 0 && <div className="lv-past">
+              <p className="lv-past-title">Past decisions for this wallet</p>
+              <ol>{selected.evaluation.matchedMemories.map((m) => <li key={m.blobId}>
+                <span className={`pl-stamp ${m.decision}`}>{m.decision === 'approve' ? 'Approved' : 'Declined'}</span>
+                <span className="lv-past-date">{m.createdAt ? new Date(m.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : ''}</span>
+                <span className="lv-past-reason">{revealed[m.blobId] ?? <em>Reason hidden</em>}</span>
+              </li>)}</ol>
+              {selected.evaluation.matchedMemories.some((m) => revealed[m.blobId] === undefined) && <Suspense fallback={<p className="ws-note">Loading wallet connect…</p>}>
+                <WalletSave expectedAddress={selected.walletAddress} disabled={busy} actionLabel="Sign to show my reasons" intro="Reasons are private to the wallet's owner. Connect this wallet and sign to read them; nothing is saved or sent." getMessage={messageToView} onSignature={showReasons}/>
+              </Suspense>}
+            </div>}
             {selected.evaluation.chainError && <p className="lv-inline-error">Tatum: {selected.evaluation.chainError}</p>}
             {selected.evaluation.memoryError && <p className="lv-inline-error">Walrus: {selected.evaluation.memoryError}</p>}
             {selected.evaluation.payment?.error && <p className="lv-inline-error">Tatum payment check: {selected.evaluation.payment.error}</p>}
